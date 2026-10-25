@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Data: original PDFs stay local (manifest.csv is committed)
+data/raw/**/*.pdf
+data/clean/*.duckdb.wal
+data/review_queue/*.parquet
+
+# Env / editors
+.env
+.DS_Store
+.vscode/*
+!.vscode/settings.json
+.ipynb_checkpoints/

@@ -1,0 +1,81 @@
+# Source configuration. Listing URLs marked CONFIRM must be checked in a browser on day 1:
+# open the site, find the WER / weekly-update archive page, paste its URL here.
+
+user_agent: "SurveillanceRadarLK/0.1 (ModelX 2.0 student project; contact: menura.20240211@iit.ac.lk)"
+request_delay_seconds: 2.0
+
+sources:
+  wer:
+    name: "Epidemiology Unit Weekly Epidemiological Report"
+    base_url: "https://www.epid.gov.lk"
+    listing_urls: []            # CONFIRM: WER archive page(s), one per year if paginated
+    # Seen PDF patterns: /storage/post/pdfs/vol_49_no_01-english.pdf
+    #                    /storage/post/pdfs/en_<hash>_<title>.pdf
+    pdf_link_regex: "(?i)/storage/post/pdfs/.*\\.pdf$"
+    english_only_regex: "(?i)(english|^en_|/en_)"
+    attribution: "Source: Epidemiology Unit, Ministry of Health, Sri Lanka"
+
+  ndcu_weekly:
+    name: "NDCU Weekly Dengue Update"
+    base_url: "https://www.dengue.health.gov.lk"
+    listing_urls: []            # CONFIRM
+    pdf_link_regex: "(?i)\\.pdf$"
+    attribution: "Source: National Dengue Control Unit, Ministry of Health, Sri Lanka"
+
+  ndcu_daily:
+    name: "NDCU Daily Update"
+    base_url: "https://www.dengue.health.gov.lk"
+    listing_urls: []            # CONFIRM
+    pdf_link_regex: "(?i)\\.pdf$"
+    attribution: "Source: National Dengue Control Unit, Ministry of Health, Sri Lanka"
+
+# WER Table 1 diseases. CONFIRM exact column headers against a 2026 issue; edit names/aliases.
+diseases:
+  - {id: dengue,           aliases: ["Dengue Fever", "DF/DHF", "Dengue"]}
+  - {id: dysentery,        aliases: ["Dysentery"]}
+  - {id: encephalitis,     aliases: ["Encephalitis"]}
+  - {id: enteric_fever,    aliases: ["Enteric Fever"]}
+  - {id: food_poisoning,   aliases: ["Food Poisoning"]}
+  - {id: leptospirosis,    aliases: ["Leptospirosis"]}
+  - {id: typhus,           aliases: ["Typhus Fever", "Typhus"]}
+  - {id: viral_hepatitis,  aliases: ["Viral Hepatitis"]}
+  - {id: human_rabies,     aliases: ["Human Rabies", "Rabies"]}
+  - {id: chickenpox,       aliases: ["Chickenpox"]}
+  - {id: meningitis,       aliases: ["Meningitis"]}
+  - {id: leishmaniasis,    aliases: ["Leishmaniasis"]}
+  - {id: tuberculosis,     aliases: ["Tuberculosis", "TB"]}
+  - {id: other,            aliases: []}   # CONFIRM the 14th column
+
+# 26 RDHS units as printed in WER Table 1 (CONFIRM spelling against a current issue).
+rdhs_units:
+  - Colombo
+  - Gampaha
+  - Kalutara
+  - Kandy
+  - Matale
+  - Nuwara Eliya
+  - Galle
+  - Hambantota
+  - Matara
+  - Jaffna
+  - Kilinochchi
+  - Mannar
+  - Vavuniya
+  - Mullaitivu
+  - Batticaloa
+  - Ampara
+  - Trincomalee
+  - Kurunegala
+  - Puttalam
+  - Anuradhapura
+  - Polonnaruwa
+  - Badulla
+  - Monaragala
+  - Ratnapura
+  - Kegalle
+  - Kalmunai
+
+thresholds:
+  completeness_min_pct: null    # set from historical distribution on day 4
+  radar_alert_quantile: 0.98
+  max_alert_rate: 0.10          # stop rule: >10% of district-weeks flagged
