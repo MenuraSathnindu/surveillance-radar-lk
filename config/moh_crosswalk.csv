@@ -1,2 +1,250 @@
-moh_name_raw,moh_name,district,ds_division
-Pugoda (Dompe),Pugoda,Gampaha,
+moh_name_raw,moh_name,district,ds_division,source
+Pugoda (Dompe),Pugoda,Gampaha,,manual
+Ampara,Ampara,Ampara,,ndcu_seed
+Damana,Damana,Ampara,,ndcu_seed
+Dehiattakandiya,Dehiattakandiya,Ampara,,ndcu_seed
+Dehiyattakandiya,Dehiyattakandiya,Ampara,,ndcu_seed
+Uhana,Uhana,Ampara,,ndcu_seed
+Galnewa,Galnewa,Anuradhapura,,ndcu_seed
+Ipalogama,Ipalogama,Anuradhapura,,ndcu_seed
+Kekirawa,Kekirawa,Anuradhapura,,ndcu_seed
+Nuwaragam-Palatha,Nuwaragam-Palatha,Anuradhapura,,ndcu_seed
+Thalawa,Thalawa,Anuradhapura,,ndcu_seed
+Thambuttegama,Thambuttegama,Anuradhapura,,ndcu_seed
+Badulla,Badulla,Badulla,,ndcu_seed
+Bandarawela,Bandarawela,Badulla,,ndcu_seed
+Hali Ela,Hali Ela,Badulla,,ndcu_seed
+Mahiyanganaya,Mahiyanganaya,Badulla,,ndcu_seed
+Passara,Passara,Badulla,,ndcu_seed
+Rideemaliyadda,Rideemaliyadda,Badulla,,ndcu_seed
+Sevanagala,Sevanagala,Badulla,,ndcu_seed
+Uva Paranagama,Uva Paranagama,Badulla,,ndcu_seed
+Welimada,Welimada,Badulla,,ndcu_seed
+Batticaloa,Batticaloa,Batticaloa,,ndcu_seed
+Chenkaladay,Chenkaladay,Batticaloa,,ndcu_seed
+Chenkalady,Chenkalady,Batticaloa,,ndcu_seed
+Eravur,Eravur,Batticaloa,,ndcu_seed
+Kaluwanchikudy,Kaluwanchikudy,Batticaloa,,ndcu_seed
+Battaramulla,Battaramulla,Colombo,,ndcu_seed
+Boralesgamuwa,Boralesgamuwa,Colombo,,ndcu_seed
+D1-CMC,D1-CMC,Colombo,,ndcu_seed
+D2A-CMC,D2A-CMC,Colombo,,ndcu_seed
+D2B-CMC,D2B-CMC,Colombo,,ndcu_seed
+D3-CMC,D3-CMC,Colombo,,ndcu_seed
+D4-CMC,D4-CMC,Colombo,,ndcu_seed
+D5-CMC,D5-CMC,Colombo,,ndcu_seed
+Dehiwala,Dehiwala,Colombo,,ndcu_seed
+Egodauyana,Egodauyana,Colombo,,ndcu_seed
+Gothatuwa,Gothatuwa,Colombo,,ndcu_seed
+Hanwella,Hanwella,Colombo,,ndcu_seed
+Homagama,Homagama,Colombo,,ndcu_seed
+Kaduwela,Kaduwela,Colombo,,ndcu_seed
+Kahathuduwa,Kahathuduwa,Colombo,,ndcu_seed
+Kahatuduwa,Kahatuduwa,Colombo,,ndcu_seed
+Kesbewa,Kesbewa,Colombo,,ndcu_seed
+Kolonnawa,Kolonnawa,Colombo,,ndcu_seed
+Maharagama,Maharagama,Colombo,,ndcu_seed
+Moratuwa,Moratuwa,Colombo,,ndcu_seed
+Nugegoda,Nugegoda,Colombo,,ndcu_seed
+Padukka,Padukka,Colombo,,ndcu_seed
+Piliyandala,Piliyandala,Colombo,,ndcu_seed
+Pitakotte,Pitakotte,Colombo,,ndcu_seed
+Pitakotte (Kotte),Pitakotte (Kotte),Colombo,,ndcu_seed
+Rathmalana,Rathmalana,Colombo,,ndcu_seed
+Akmeemana,Akmeemana,Galle,,ndcu_seed
+Ambalangoda,Ambalangoda,Galle,,ndcu_seed
+Baddegama,Baddegama,Galle,,ndcu_seed
+Balapitiya,Balapitiya,Galle,,ndcu_seed
+Bope Poddala,Bope Poddala,Galle,,ndcu_seed
+Elpitiya,Elpitiya,Galle,,ndcu_seed
+Habaraduwa,Habaraduwa,Galle,,ndcu_seed
+Hikkaduwa,Hikkaduwa,Galle,,ndcu_seed
+Imaduwa,Imaduwa,Galle,,ndcu_seed
+Induruwa,Induruwa,Galle,,ndcu_seed
+Karandeniya,Karandeniya,Galle,,ndcu_seed
+MC-Galle,MC-Galle,Galle,,ndcu_seed
+Neluwa,Neluwa,Galle,,ndcu_seed
+Rathgama,Rathgama,Galle,,ndcu_seed
+Thawalama,Thawalama,Galle,,ndcu_seed
+Udugama,Udugama,Galle,,ndcu_seed
+Yakkalamulla,Yakkalamulla,Galle,,ndcu_seed
+Aththanagalla,Aththanagalla,Gampaha,,ndcu_seed
+Attanagalla,Attanagalla,Gampaha,,ndcu_seed
+Biyagama,Biyagama,Gampaha,,ndcu_seed
+Divulapitiya,Divulapitiya,Gampaha,,ndcu_seed
+Gampaha,Gampaha,Gampaha,,ndcu_seed
+Ja-Ela,Ja-Ela,Gampaha,,ndcu_seed
+Katana,Katana,Gampaha,,ndcu_seed
+Kelaniya,Kelaniya,Gampaha,,ndcu_seed
+Mahara,Mahara,Gampaha,,ndcu_seed
+Meerigama,Meerigama,Gampaha,,ndcu_seed
+Minuwangoda,Minuwangoda,Gampaha,,ndcu_seed
+Negombo,Negombo,Gampaha,,ndcu_seed
+Pugoda,Pugoda,Gampaha,,ndcu_seed
+Pugode(Dompe),Pugode (Dompe),Gampaha,,ndcu_seed
+Ragama,Ragama,Gampaha,,ndcu_seed
+Seeduwa,Seeduwa,Gampaha,,ndcu_seed
+Wattala,Wattala,Gampaha,,ndcu_seed
+Ambalantota,Ambalantota,Hambantota,,ndcu_seed
+Angunukolapelas,Angunukolapelas,Hambantota,,ndcu_seed
+Angunukolapelassa,Angunukolapelassa,Hambantota,,ndcu_seed
+Auriyawewa,Auriyawewa,Hambantota,,ndcu_seed
+Beliatta,Beliatta,Hambantota,,ndcu_seed
+Hambantota,Hambantota,Hambantota,,ndcu_seed
+Tissamaharama,Tissamaharama,Hambantota,,ndcu_seed
+Walasmulla,Walasmulla,Hambantota,,ndcu_seed
+Weeraketiya,Weeraketiya,Hambantota,,ndcu_seed
+Weereketiya,Weereketiya,Hambantota,,ndcu_seed
+Karaveddy,Karaveddy,Jaffna,,ndcu_seed
+Point Pedro,Point Pedro,Jaffna,,ndcu_seed
+Telippalai,Telippalai,Jaffna,,ndcu_seed
+Tellippalai,Tellippalai,Jaffna,,ndcu_seed
+Addalaichchenai,Addalaichchenai,Kalmunai,,ndcu_seed
+Akkaraipathu,Akkaraipathu,Kalmunai,,ndcu_seed
+Akkaraipattu,Akkaraipattu,Kalmunai,,ndcu_seed
+Kalmunai North,Kalmunai North,Kalmunai,,ndcu_seed
+Kalmunai South,Kalmunai South,Kalmunai,,ndcu_seed
+Ninthavur,Ninthavur,Kalmunai,,ndcu_seed
+Thirukkovil,Thirukkovil,Kalmunai,,ndcu_seed
+Aluthgama,Aluthgama,Kalutara,,ndcu_seed
+Banadaragama,Banadaragama,Kalutara,,ndcu_seed
+Bandaragama,Bandaragama,Kalutara,,ndcu_seed
+Bulathsinhala,Bulathsinhala,Kalutara,,ndcu_seed
+Dodangoda PS,Dodangoda PS,Kalutara,,ndcu_seed
+Horana,Horana,Kalutara,,ndcu_seed
+Ingiriya,Ingiriya,Kalutara,,ndcu_seed
+Kalutara,Kalutara,Kalutara,,ndcu_seed
+Madurawala,Madurawala,Kalutara,,ndcu_seed
+Mathugama,Mathugama,Kalutara,,ndcu_seed
+Millaniya,Millaniya,Kalutara,,ndcu_seed
+Panadura,Panadura,Kalutara,,ndcu_seed
+Payagala,Payagala,Kalutara,,ndcu_seed
+Pyagala,Pyagala,Kalutara,,ndcu_seed
+Wadduwa,Wadduwa,Kalutara,,ndcu_seed
+Walallawita,Walallawita,Kalutara,,ndcu_seed
+Akurana,Akurana,Kandy,,ndcu_seed
+Bambaradeniya,Bambaradeniya,Kandy,,ndcu_seed
+Doluwa,Doluwa,Kandy,,ndcu_seed
+Galagedara,Galagedara,Kandy,,ndcu_seed
+Galaha,Galaha,Kandy,,ndcu_seed
+Gampola,Gampola,Kandy,,ndcu_seed
+Gangawata,Gangawata,Kandy,,ndcu_seed
+Gangawata Korale,Gangawata Korale,Kandy,,ndcu_seed
+Hasalaka,Hasalaka,Kandy,,ndcu_seed
+Hatharaliyadda,Hatharaliyadda,Kandy,,ndcu_seed
+Kandy MC,Kandy MC,Kandy,,ndcu_seed
+Kundasale,Kundasale,Kandy,,ndcu_seed
+Kurunduwaththa,Kurunduwaththa,Kandy,,ndcu_seed
+Medadumbara,Medadumbara,Kandy,,ndcu_seed
+Menikhinna,Menikhinna,Kandy,,ndcu_seed
+Pasbage,Pasbage,Kandy,,ndcu_seed
+Poojapitiya,Poojapitiya,Kandy,,ndcu_seed
+Thalathuoya,Thalathuoya,Kandy,,ndcu_seed
+Udunuwara,Udunuwara,Kandy,,ndcu_seed
+Waththegama,Waththegama,Kandy,,ndcu_seed
+Werellagama,Werellagama,Kandy,,ndcu_seed
+Yatinuwara,Yatinuwara,Kandy,,ndcu_seed
+Aranayake,Aranayake,Kegalle,,ndcu_seed
+Bulathkohupitiya,Bulathkohupitiya,Kegalle,,ndcu_seed
+Dehiovita,Dehiovita,Kegalle,,ndcu_seed
+Deraniyagala,Deraniyagala,Kegalle,,ndcu_seed
+Galigamuwa,Galigamuwa,Kegalle,,ndcu_seed
+Kegalle,Kegalle,Kegalle,,ndcu_seed
+Mawanella,Mawanella,Kegalle,,ndcu_seed
+Rambukkana,Rambukkana,Kegalle,,ndcu_seed
+Ruwanwella,Ruwanwella,Kegalle,,ndcu_seed
+Warakapola,Warakapola,Kegalle,,ndcu_seed
+Yatiyanthota,Yatiyanthota,Kegalle,,ndcu_seed
+Alawwa,Alawwa,Kurunegala,,ndcu_seed
+Ambanpola,Ambanpola,Kurunegala,,ndcu_seed
+Galgamuwa,Galgamuwa,Kurunegala,,ndcu_seed
+Ibbagamuwa,Ibbagamuwa,Kurunegala,,ndcu_seed
+Kobeigane,Kobeigane,Kurunegala,,ndcu_seed
+Kuliyapitiya,Kuliyapitiya,Kurunegala,,ndcu_seed
+Kurunegala,Kurunegala,Kurunegala,,ndcu_seed
+MC Kurunegala,MC Kurunegala,Kurunegala,,ndcu_seed
+Mallawapitiya,Mallawapitiya,Kurunegala,,ndcu_seed
+Mawathagama,Mawathagama,Kurunegala,,ndcu_seed
+Narammala,Narammala,Kurunegala,,ndcu_seed
+Panduwasnuwara,Panduwasnuwara,Kurunegala,,ndcu_seed
+Pannala,Pannala,Kurunegala,,ndcu_seed
+Polgahawela,Polgahawela,Kurunegala,,ndcu_seed
+Polpithigama,Polpithigama,Kurunegala,,ndcu_seed
+Udubaddawa,Udubaddawa,Kurunegala,,ndcu_seed
+Galewela,Galewela,Matale,,ndcu_seed
+Matale,Matale,Matale,,ndcu_seed
+Matale MC,Matale MC,Matale,,ndcu_seed
+Rattota,Rattota,Matale,,ndcu_seed
+Ukuwela,Ukuwela,Matale,,ndcu_seed
+Yatawatta,Yatawatta,Matale,,ndcu_seed
+Akuressa,Akuressa,Matara,,ndcu_seed
+Athuraliya,Athuraliya,Matara,,ndcu_seed
+Deniyaya,Deniyaya,Matara,,ndcu_seed
+Devinuwara,Devinuwara,Matara,,ndcu_seed
+Dickwella,Dickwella,Matara,,ndcu_seed
+Hakmana,Hakmana,Matara,,ndcu_seed
+Kamburupitiya,Kamburupitiya,Matara,,ndcu_seed
+Kotapola,Kotapola,Matara,,ndcu_seed
+Malimbada,Malimbada,Matara,,ndcu_seed
+Matara MC,Matara MC,Matara,,ndcu_seed
+Matara PS,Matara PS,Matara,,ndcu_seed
+Morawaka,Morawaka,Matara,,ndcu_seed
+Mulatiyana,Mulatiyana,Matara,,ndcu_seed
+PS Kekanadura,PS Kekanadura,Matara,,ndcu_seed
+Pasgoda,Pasgoda,Matara,,ndcu_seed
+Thihagoda,Thihagoda,Matara,,ndcu_seed
+Weligama,Weligama,Matara,,ndcu_seed
+Welipitiya,Welipitiya,Matara,,ndcu_seed
+Bibile,Bibile,Monaragala,,ndcu_seed
+Medagama,Medagama,Monaragala,,ndcu_seed
+Monaragala,Monaragala,Monaragala,,ndcu_seed
+Sevenagala,Sevenagala,Monaragala,,ndcu_seed
+Siyambalanduwa,Siyambalanduwa,Monaragala,,ndcu_seed
+Thanamalwila,Thanamalwila,Monaragala,,ndcu_seed
+wellawaya,wellawaya,Monaragala,,ndcu_seed
+Oddusudan,Oddusudan,Mullaitivu,,ndcu_seed
+Ambagamuwa,Ambagamuwa,Nuwara Eliya,,ndcu_seed
+Maskeliya,Maskeliya,Nuwara Eliya,,ndcu_seed
+Nawathispane,Nawathispane,Nuwara Eliya,,ndcu_seed
+Rigillakasgada,Rigillakasgada,Nuwara Eliya,,ndcu_seed
+Rikillagaskada,Rikillagaskada,Nuwara Eliya,,ndcu_seed
+Aralaganwila,Aralaganwila,Polonnaruwa,,ndcu_seed
+Hingurakoda,Hingurakoda,Polonnaruwa,,ndcu_seed
+Medirigiriya,Medirigiriya,Polonnaruwa,,ndcu_seed
+Thamankaduwa,Thamankaduwa,Polonnaruwa,,ndcu_seed
+Anamaduwa,Anamaduwa,Puttalam,,ndcu_seed
+Chilaw,Chilaw,Puttalam,,ndcu_seed
+Dankotuwa,Dankotuwa,Puttalam,,ndcu_seed
+Kalpitiya,Kalpitiya,Puttalam,,ndcu_seed
+Madampe,Madampe,Puttalam,,ndcu_seed
+Mahawewa,Mahawewa,Puttalam,,ndcu_seed
+Mundel,Mundel,Puttalam,,ndcu_seed
+Nattandiya,Nattandiya,Puttalam,,ndcu_seed
+Puttalam,Puttalam,Puttalam,,ndcu_seed
+Wennappuwa,Wennappuwa,Puttalam,,ndcu_seed
+Ayagama,Ayagama,Ratnapura,,ndcu_seed
+Balangoda,Balangoda,Ratnapura,,ndcu_seed
+Eheliyagoda,Eheliyagoda,Ratnapura,,ndcu_seed
+Elapatha,Elapatha,Ratnapura,,ndcu_seed
+Embilipitiya,Embilipitiya,Ratnapura,,ndcu_seed
+Goadakawela,Goadakawela,Ratnapura,,ndcu_seed
+Godakawela,Godakawela,Ratnapura,,ndcu_seed
+Imbulpe,Imbulpe,Ratnapura,,ndcu_seed
+Kahawatta,Kahawatta,Ratnapura,,ndcu_seed
+Kalawana,Kalawana,Ratnapura,,ndcu_seed
+Kiriella,Kiriella,Ratnapura,,ndcu_seed
+Kolonna,Kolonna,Ratnapura,,ndcu_seed
+Kuruvita,Kuruvita,Ratnapura,,ndcu_seed
+Nivithigala,Nivithigala,Ratnapura,,ndcu_seed
+Pelmadulla,Pelmadulla,Ratnapura,,ndcu_seed
+Rathnapura MC,Rathnapura MC,Ratnapura,,ndcu_seed
+Ratnapura MC,Ratnapura MC,Ratnapura,,ndcu_seed
+Ratnapura PS,Ratnapura PS,Ratnapura,,ndcu_seed
+Udawalawa,Udawalawa,Ratnapura,,ndcu_seed
+Udawalwa,Udawalwa,Ratnapura,,ndcu_seed
+Kanthale,Kanthale,Trincomalee,,ndcu_seed
+Muthur,Muthur,Trincomalee,,ndcu_seed
+Padavisripura,Padavisripura,Trincomalee,,ndcu_seed
+Trincomalee,Trincomalee,Trincomalee,,ndcu_seed
+Uppuveli,Uppuveli,Trincomalee,,ndcu_seed
+Vavuniya,Vavuniya,Vavuniya,,ndcu_seed

@@ -23,9 +23,21 @@ Delivered as a Streamlit dashboard + a one-page weekly brief per RDHS.
 ## Hard rules
 - **No clinical content.** No diagnosis, treatment or prophylaxis advice, nothing about individuals.
   Every alert is "a signal for investigation" and shows its track record.
-- **Nothing unvalidated reaches the UI.** Extracted rows must pass the sum check (districts add
-  to the Sri Lanka total) and the cumulative check (cum_t = cum_{t-1} + weekly_t). Failures go to
-  `data/review_queue/`, never to the dashboard.
+- **Nothing unvalidated reaches the UI. Validation has two tiers:**
+  1. `extraction_valid` (column `validated`) = passes the checks that need only the one issue: per
+     (week, disease) the 26 districts' *cumulative* counts add to the printed national cumulative;
+     no blank or unreadable count cell; completeness/timeliness in [0,100] (outside -> NaN, counted).
+     Only `extraction_valid` rows are written to `data/clean/` and may reach the dashboard; everything
+     else goes to `data/review_queue/`. If the cumulatives add up but the districts' weekly counts do
+     not add to the printed national weekly, the national weekly is a source error: keep the district
+     rows (`note=national_weekly_source_error`), queue only the national row.
+  2. `revised` = the cross-week identity cum_t = cum_{t-1} + weekly_t fails. This does **not** remove a
+     row: it sets `revised=True` and `revision_delta = cum_t - (cum_{t-1} + weekly_t)` (empty if the
+     previous week is missing). Weekly counts are kept **as first printed** in that issue (what a
+     Regional Epidemiologist saw in real time); the radar uses those, never back-filled values.
+- **Completeness is relative.** C** is undefined in the WER, so never apply an absolute threshold:
+  `completeness_low` = below that RDHS's own 10th percentile of past C** (expanding, past only).
+  T* is display-only (it steps from ~40% to ~93% at 2023-W52).
 - **Every displayed number carries its source file and as-of date.**
 - **No LLM reads PDFs or produces numbers.** An LLM may only phrase the brief from computed values;
   the template path must always work without it.
