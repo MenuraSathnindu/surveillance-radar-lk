@@ -1,0 +1,10 @@
+file,status,reason,source_issue
+wer/en_63ec87e11b430_WER.pdf,no_table,no page with a Table 1 'Medical Officers of Health' title,
+wer/en_64100cf21b53d_Vol_50_no_02-english_1.pdf,failed,"week_weekday: Fri 2021-12-31 to 2022-01-06 starts on Friday, WER weeks then started on Saturday",Vol 50 No 2
+wer/en_658bfc0e47143_Vol_50_no_41-english.pdf,failed,week_text_inconsistent: '30th– 06th Sep 2023 ': start day 30 != 2023-08-31,Vol 50 No 41
+wer/en_6684d253a04fc_Vol_51_no_24-english.pdf,failed,"week_weekday: Wed 2024-05-01 to 2024-05-07 starts on Wednesday, WER weeks then started on Saturday",Vol 51 No 24
+wer/en_66ff7279f1888_Vol_51_no_36-english.pdf,failed,week_number_mismatch: printed week 35 != canonical 2024-W34 (+0) for 2024-08-17..2024-08-23,Vol 51 No 36
+wer/en_69db13e10917e_Vol_53_no_02-english.pdf,failed,"week_weekday: Sun 2024-12-29 to 2025-01-04 starts on Sunday, WER weeks then started on Saturday",Vol 53 No 2
+wer/en_69db15872f0bb_Vol_53_no_03-english.pdf,failed,"week_weekday: Sun 2025-01-05 to 2025-01-11 starts on Sunday, WER weeks then started on Saturday",Vol 53 No 3
+wer/en_6abdf20d4de58_Vol_53_no_32-english.pdf,failed,week_text_inconsistent: '26th – 02nd Aug 2026 ': start day 26 != 2026-07-27,Vol 53 No 32
+wer/Vol_38_NO_29_English.pdf,no_table,no page with a Table 1 'Medical Officers of Health' title,

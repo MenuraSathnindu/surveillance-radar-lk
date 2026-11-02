@@ -218,7 +218,7 @@ def run(source: str, years: range | None, dry_run: bool) -> None:
         try:
             html = fetcher.get(listing).text
         except Exception as e:
-            raise SystemExit(f"[stop] could not fetch listing {listing}: {e}")
+            raise SystemExit(f"[stop] could not fetch listing {listing}: {e}") from e
         links, unknown = select_candidates(html, listing, src, years)
         per_year = Counter(link_years(i.url, i.text)[0] for i in links)
         print(f"{listing}: {len(links)} candidate PDFs")
@@ -248,7 +248,7 @@ def run(source: str, years: range | None, dry_run: bool) -> None:
                         f"[stop] {failures} consecutive failures; the server may be rate-limiting "
                         f"or down. {n_new} file(s) saved so far. Re-run later; the manifest "
                         "skips what is already downloaded."
-                    )
+                    ) from e
                 continue
             failures = 0
             target.write_bytes(data)

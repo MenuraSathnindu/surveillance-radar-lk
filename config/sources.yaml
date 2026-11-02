@@ -38,16 +38,16 @@ sources:
 diseases:
   - {id: dengue,           aliases: ["Dengue Fever", "DF/DHF", "Dengue"]}
   - {id: dysentery,        aliases: ["Dysentery"]}
-  - {id: encephalitis,     aliases: ["Encephalitis", "Encephaliti"]}
-  - {id: enteric_fever,    aliases: ["Enteric Fever", "En. Fever"]}
-  - {id: food_poisoning,   aliases: ["Food Poisoning", "Food Poi-", "F. Poisoning", "F. Poison-"]}
+  - {id: encephalitis,     aliases: ["Encephalitis", "Encephaliti", "Encephalit", "Encephali"]}
+  - {id: enteric_fever,    aliases: ["Enteric Fever", "En. Fever", "Enteric F.", "Enteric"]}
+  - {id: food_poisoning,   aliases: ["Food Poisoning", "Food Poi-", "F. Poisoning", "F. Poison-", "Food Poison-"]}
   - {id: leptospirosis,    aliases: ["Leptospirosis"]}
-  - {id: typhus,           aliases: ["Typhus Fever", "Typhus F.", "Typhus"]}
-  - {id: viral_hepatitis,  aliases: ["Viral Hepatitis", "Viral Hep-", "Viral Hep."]}
-  - {id: human_rabies,     aliases: ["Human Rabies", "H. Rabies", "Rabies"]}
+  - {id: typhus,           aliases: ["Typhus Fever", "Typhus F.", "Typhus", "Typhus Fe-", "Typhus Fev."]}
+  - {id: viral_hepatitis,  aliases: ["Viral Hepatitis", "Viral Hep-", "Viral Hep.", "Viral Hepa-", "V. Hep.", "Viral"]}
+  - {id: human_rabies,     aliases: ["Human Rabies", "H. Rabies", "Rabies", "Human", "H . R abiies", "H. Rabi."]}  # 2022 header is cut to "Human"; 2024 is garbled "H . R abiies"
   - {id: chickenpox,       aliases: ["Chickenpox"]}
   - {id: meningitis,       aliases: ["Meningitis"]}
-  - {id: leishmaniasis,    aliases: ["Leishmaniasis", "Leishmania-", "Leishman."]}
+  - {id: leishmaniasis,    aliases: ["Leishmaniasis", "Leishmania-", "Leishman.", "Leishmani-"]}
   - {id: tuberculosis,     aliases: ["Tuberculosis", "TB"]}   # first in Vol 51 No 11
   - {id: leprosy,          aliases: ["Leprosy"]}              # first in Vol 53 No 1
 
@@ -91,7 +91,22 @@ rdhs_label_variants:
   "Anuradhapur": Anuradhapura    # 2022: text layer ends one letter short (confirm in parser)
   "Anuradhapu": Anuradhapura
   "Kalmune": Kalmunai            # 2022: text layer ends one letter short (confirm in parser)
+  "Puttlam": Puttalam            # 2026 misspelling in Table 1 (row position confirms)
 national_total_label: "SRILANKA"  # printed "SRI LANKA"; compare after stripping spaces
+
+# WER calendar facts used to sanity-check the week printed in Table 1 (see docs/LAYOUTS.md).
+wer_calendar:
+  # Tables are Saturday-Friday until Vol 53 No 1 (20-26 Dec 2025); from Vol 53 No 2 (29 Dec 2025 -
+  # 4 Jan 2026) they are Monday-Sunday. Vol 53 Nos 1-2 carry the notice "The WRCD reporting week
+  # was revised from Saturday-Friday to Monday-Sunday".
+  monday_weeks_from: 2025-12-29
+  # WER's own "(Nth Week)" equals the canonical (Thursday-rule) week, except 2021, which WER
+  # numbered one ahead because its week 1 began Sat 26 Dec 2020.
+  printed_week_offset: {2021: 1}
+  # User-approved corrections for source typos in the printed week, keyed by file as in
+  # data/raw/manifest.csv. Empty until approved. Example:
+  #   "wer/en_6684d253a04fc_Vol_51_no_24-english.pdf": {start: 2024-06-01}   # printed "May"
+  week_overrides: {}
 
 thresholds:
   completeness_min_pct: null    # set from historical distribution on day 4

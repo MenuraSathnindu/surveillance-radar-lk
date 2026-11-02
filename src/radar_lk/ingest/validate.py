@@ -50,12 +50,9 @@ def validate(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     or the row itself fails the cumulative check. Unknown cumulative status passes
     but is kept visible via the cum_ok column.
     """
+    keys = ["epi_year", "epi_week", "disease"]
     sums = sum_check(df)
-    d = cumulative_check(df).merge(
-        sums[["epi_year", "epi_week", "disease", "sum_ok"]],
-        on=["epi_year", "epi_week", "disease"],
-        how="left",
-    )
+    d = cumulative_check(df).merge(sums[keys + ["sum_ok"]], on=keys, how="left")
     bad = d["sum_ok"].eq(False) | d["cum_ok"].eq(False)
     reason = pd.Series("", index=d.index)
     reason[d["sum_ok"].eq(False)] += "sum_mismatch;"
@@ -63,3 +60,59 @@ def validate(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     d["fail_reason"] = reason
     d["validated"] = ~bad
     return d[~bad].reset_index(drop=True), d[bad].reset_index(drop=True)
+
+
+def reclassify_source_total_errors(
+    passed: pd.DataFrame, failed: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Separate a wrong *printed national total* from errors in the district rows.
+
+    For a (week, disease) that fails the sum check, if every district row passes its own
+    cumulative check (explicitly True, not unknown) and the national row fails its cumulative
+    check, the districts are internally consistent and only the printed national figure is off.
+    Then:
+      - the district rows are kept: validated=True, note="national_total_source_error"
+      - only the national row stays in the failed set, fail_reason "source_total_error;..."
+    Anything else is left as validate() classified it.
+
+    Returns (passed, failed, errors); ``errors`` has one row per reclassified (week, disease)
+    with the printed national value and the district sum, for the extraction report.
+    """
+    keys = ["epi_year", "epi_week", "disease"]
+    passed, failed = passed.copy(), failed.copy()
+    for d in (passed, failed):
+        if "note" not in d:
+            d["note"] = ""
+    promote: list[int] = []
+    national_idx: list[int] = []
+    errors = []
+    sum_bad = failed[failed["sum_ok"].eq(False)]
+    for key, g in sum_bad.groupby(keys):
+        nat = g[g["area"] == NATIONAL]
+        dist = g[g["area"] != NATIONAL]
+        if len(nat) != 1 or dist.empty:
+            continue
+        ok = g["cum_ok"].astype("boolean")
+        if not ok[nat.index].eq(False).all():
+            continue
+        if not ok[dist.index].fillna(False).all():
+            continue
+        promote += list(dist.index)
+        national_idx += list(nat.index)
+        e = dict(zip(keys, key, strict=True))
+        e.update(
+            printed_national_cases=int(nat["cases"].iloc[0]),
+            district_sum_cases=int(dist["cases"].sum()),
+            printed_national_cum=int(nat["cum_cases"].iloc[0]),
+            district_sum_cum=int(dist["cum_cases"].sum()),
+            source_file=nat["source_file"].iloc[0],
+        )
+        errors.append(e)
+    moved = failed.loc[promote].copy()
+    moved["validated"] = True
+    moved["fail_reason"] = ""
+    moved["note"] = "national_total_source_error"
+    failed.loc[national_idx, "fail_reason"] = "source_total_error;" + failed.loc[national_idx, "fail_reason"]
+    failed = failed.drop(index=promote).reset_index(drop=True)
+    passed = pd.concat([passed, moved], ignore_index=True)
+    return passed, failed, pd.DataFrame(errors)

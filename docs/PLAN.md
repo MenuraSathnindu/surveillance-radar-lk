@@ -35,7 +35,9 @@ If the site goes down again: drop PDFs into `data/raw/wer/` and run
 - Radar flags >10% of district-weeks → tighten thresholds or restrict diseases.
 
 ## Status
-- [ ] Mon 2 Nov — downloader fixed, PDFs downloaded, layouts documented (parser not started in code yet)
-- [ ] Tue 3 — WER parser + validation, NDCU check, outlook decision
+- [x] Mon 2 Nov — downloader fixed, 244 PDFs downloaded, layouts documented, WER parser + validation
+  written (`python -m radar_lk.ingest.parse_wer`), extraction report and hand-check pack generated
+- [ ] Tue 3 — **decision needed first:** validated rate is 90.6% vs the 95% target (see
+  `docs/EXTRACTION_REPORT.md` section 4 and "What-if"); then hand-check, NDCU check, outlook decision
 - [ ] Wed 4 — radar + outlook + backtests
 - [ ] Thu 5 — dashboard, brief, report, video, submit by 23:59

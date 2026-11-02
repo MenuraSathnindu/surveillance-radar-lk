@@ -1,0 +1,41 @@
+no,issue,page,district,disease,column,extracted_value,verified,epi_week,image
+1,Vol 53 No 26,3,Nuwara Eliya,dysentery,B,33,,2026-W25,Vol_53_No_26.png
+2,Vol 52 No 36,3,Batticaloa,human_rabies,B,0,,2025-W35,Vol_52_No_36.png
+3,Vol 49 No 46,3,Mannar,chickenpox,A,0,,2022-W45,Vol_49_No_46.png
+4,Vol 49 No 27,3,Batticaloa,leptospirosis,A,0,,2022-W26,Vol_49_No_27.png
+5,Vol 53 No 22,3,Matale,encephalitis,B,3,,2026-W21,Vol_53_No_22.png
+6,Vol 49 No 17,3,Colombo,food_poisoning,B,5,,2022-W16,Vol_49_No_17.png
+7,Vol 51 No 9,3,Kilinochchi,human_rabies,A,0,,2024-W08,Vol_51_No_9.png
+8,Vol 49 No 7,3,Nuwara Eliya,typhus,B,2,,2022-W06,Vol_49_No_7.png
+9,Vol 49 No 50,3,Kalutara,enteric_fever,A,0,,2022-W49,Vol_49_No_50.png
+10,Vol 50 No 13,3,Colombo,dysentery,A,0,,2023-W12,Vol_50_No_13.png
+11,Vol 52 No 36,3,Jaffna,leishmaniasis,B,0,,2025-W35,Vol_52_No_36.png
+12,Vol 50 No 4,3,Trincomalee,leishmaniasis,B,0,,2023-W03,Vol_50_No_4.png
+13,Vol 52 No 46,3,Galle,dengue,B,1887,,2025-W45,Vol_52_No_46.png
+14,Vol 53 No 28,3,Kegalle,viral_hepatitis,B,10,,2026-W27,Vol_53_No_28.png
+15,Vol 53 No 26,3,Colombo,enteric_fever,A,0,,2026-W25,Vol_53_No_26.png
+16,Vol 50 No 51,3,Kalmunai,dengue,B,1787,,2023-W50,Vol_50_No_51.png
+17,Vol 49 No 17,3,Mullaitivu,leishmaniasis,B,1,,2022-W16,Vol_49_No_17.png
+18,Vol 53 No 7,3,Gampaha,meningitis,B,41,,2026-W06,Vol_53_No_7.png
+19,Vol 49 No 38,3,Monaragala,viral_hepatitis,B,46,,2022-W37,Vol_49_No_38.png
+20,Vol 53 No 33,3,Batticaloa,leprosy,B,78,,2026-W32,Vol_53_No_33.png
+21,Vol 50 No 10,3,Trincomalee,encephalitis,A,0,,2023-W09,Vol_50_No_10.png
+22,Vol 51 No 26,3,Mannar,chickenpox,A,1,,2024-W25,Vol_51_No_26.png
+23,Vol 50 No 13,3,Ampara,viral_hepatitis,A,0,,2023-W12,Vol_50_No_13.png
+24,Vol 50 No 20,3,Monaragala,human_rabies,B,0,,2023-W19,Vol_50_No_20.png
+25,Vol 51 No 23,3,Kurunegala,enteric_fever,A,0,,2024-W22,Vol_51_No_23.png
+26,Vol 50 No 15,3,Puttalam,food_poisoning,B,0,,2023-W14,Vol_50_No_15.png
+27,Vol 52 No 5,3,Galle,leptospirosis,B,69,,2025-W04,Vol_52_No_5.png
+28,Vol 51 No 16,3,Batticaloa,meningitis,A,0,,2024-W15,Vol_51_No_16.png
+29,Vol 52 No 43,3,Kurunegala,typhus,A,1,,2025-W42,Vol_52_No_43.png
+30,Vol 53 No 34,3,Galle,tuberculosis,A,11,,2026-W33,Vol_53_No_34.png
+31,Vol 51 No 7,3,Trincomalee,dengue,B,235,,2024-W06,Vol_51_No_7.png
+32,Vol 51 No 15,3,Gampaha,leishmaniasis,B,6,,2024-W14,Vol_51_No_15.png
+33,Vol 52 No 39,3,Anuradhapura,chickenpox,A,8,,2025-W38,Vol_52_No_39.png
+34,Vol 49 No 8,3,Nuwara Eliya,encephalitis,A,0,,2022-W07,Vol_49_No_8.png
+35,Vol 53 No 1,3,Matale,leprosy,A,1,,2025-W52,Vol_53_No_1.png
+36,Vol 51 No 45,3,Gampaha,encephalitis,B,35,,2024-W44,Vol_51_No_45.png
+37,Vol 50 No 24,3,Puttalam,enteric_fever,A,0,,2023-W23,Vol_50_No_24.png
+38,Vol 53 No 28,3,Nuwara Eliya,food_poisoning,B,15,,2026-W27,Vol_53_No_28.png
+39,Vol 52 No 12,3,Kandy,enteric_fever,A,0,,2025-W11,Vol_52_No_12.png
+40,Vol 51 No 25,3,Hambantota,viral_hepatitis,A,0,,2024-W24,Vol_51_No_25.png

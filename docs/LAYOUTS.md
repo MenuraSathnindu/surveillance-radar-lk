@@ -40,7 +40,8 @@ Nothing here is parser code; this is what the parser has to cope with.
   They are single percentages with no `%` sign, **per RDHS and also on the SRI LANKA row**.
   So with `n` disease pairs: columns `2n+1` = T, `2n+2` = C (1-based, after the row label).
   Footnote text: `T*=Timeliness refers to returns received on or before <date>` /
-  `C**-Completeness…` (the completeness definition is cut off in the text layer in all three).
+  `C**-Completeness` (no definition follows it, in the text layer or on the rendered page; see
+  docs/EXTRACTION_REPORT.md section 9).
 - **Reporting-week text** is only reliable in the Table 1 title (upright text), format
   `<start day>(th|st|nd|rd) – <end day>(th|st|nd|rd) <Mon|Month> <year> (<N>th Week)`,
   e.g. `18th– 24th Jun 2022 (25th Week)`. Month abbreviation varies (`Jun`, `June`, `Sep`, `July`).
@@ -69,11 +70,13 @@ Nothing here is parser code; this is what the parser has to cope with.
   refers to returns received on or before 24rth June , 2022 Total number of reporting units 361
   Number of reporting units data provided for the current week: 308 C**-`
 - **Quirks**
-  - *Row labels truncated / merged:* text layer gives `NuwaraEliya`, `Anuradhapur` and `Kalmune` (the
-    latter two end one letter short; I did not check whether the glyphs are missing in the PDF or
-    only in the text layer). 2024 and 2026 are clean. Match on row position or normalised prefix.
-  - ***SRI LANKA row fails the district-sum check in 3 cells*** (all 3-digit values, the printed
-    value looks like a digit was lost; confirmed on the rendered page, not an extraction error):
+  - *Row labels truncated / merged:* the page itself prints `NuwaraEliya`, `Anuradhapur` and
+    `Kalmune` (checked on the rendered page, so this is the source, not the text layer). 2024 and
+    2026 are clean. They are mapped through `rdhs_label_variants` in `config/sources.yaml`.
+  - ***SRI LANKA row fails the district-sum check in 3 cells*** (the printed value is far below the
+    district sum, e.g. 20 vs 809; confirmed on the rendered page, so it is not an extraction error;
+    the national *cumulative* columns still add up, and the full run shows this pattern in many
+    2022-23 issues, see docs/EXTRACTION_REPORT.md section 4):
     Dengue A prints `20` (26 districts sum to 809), Leptospirosis A prints `16` (sum 163), Viral
     Hepatitis B prints `16` (sum 164). The other 21 of the 24 additive columns match exactly. Our sum check
     will correctly send this issue to `data/review_queue/`.
@@ -184,12 +187,14 @@ and Leprosy have **no history before Mar 2024 / Jan 2026**, which limits the rad
 
 ## Uncertain / to verify when writing the parser
 
-1. `C**` (completeness) definition is cut off in every footnote. For 2022 SRI LANKA: 308 of 361
-   reporting units supplied data (85 %) but C = 94, T = 17. I do not know what C is a percentage of.
-   Needs a hand check against the Epidemiology Unit's definition before gating alerts on it.
-2. Whether `Anuradhapur` / `Kalmune` (2022) are missing glyphs or only text-layer truncation.
-3. Whether the 2022 SRI LANKA digit loss recurs in other 2022/2023 issues (it is one issue of the
-   ones sampled; the validator will tell us).
-4. Weeks that straddle New Year / 53-week years were not sampled (only week 25 per year).
-5. Layout drift inside a year was checked only by page position and disease count, not by
-   column-level comparison on every issue.
+1. `C**` (completeness) is never defined in any of the 244 PDFs (searched in full: see
+   docs/EXTRACTION_REPORT.md section 9). It is not units-that-reported / total units (2022 national:
+   308/361 = 85 % but C = 94). Still unresolved; ask the Epidemiology Unit before gating on it.
+2. *(Resolved 2 Nov)* `Anuradhapur` / `Kalmune` are printed truncated in the 2022 PDF itself.
+3. *(Resolved 2 Nov)* The 2022 national-row error recurs: 33 reclassified cases plus ~150 more
+   failing groups, mostly 2022-23 dengue and leptospirosis.
+4. *(Resolved 2 Nov)* New-Year and 53-week weeks were checked on real PDFs (tests/test_parse_wer.py);
+   WER prints 26 Dec 2020 - 1 Jan 2021 as "(1st Week)" while the Thursday rule gives 2020-W53.
+5. *(Resolved 2 Nov)* Layout drift was measured on all 244 files by the parser: 235 parse; header
+   spellings vary a lot (see report section 8) but the layout and page are stable. Seven issues
+   have source typos in the printed week.
