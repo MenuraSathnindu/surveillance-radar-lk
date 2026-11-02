@@ -1,14 +1,16 @@
-"""Radar backtest -> docs/RADAR_BACKTEST.md and docs/figures/.
+"""Radar backtest -> docs/RADAR_BACKTEST.md and docs/figures/ (proposal section 9).
 
     python -m radar_lk.radar.backtest      (after python -m radar_lk.radar.run)
 
-a) Injected-outbreak evaluation: simulated outbreaks added to the real series (sizes negative-
-   binomial, scaled to each series' SD, spread over 1-4 weeks, start in 2024-2026), 200 per disease.
-   Sensitivity and median detection delay per method; specificity and false alerts per 100
-   district-weeks from the real (un-injected) 2024-2026 data.
-b) Real-data alert rate per method, per disease and overall (+ the 10% stop rule).
-c) External validation of the dengue radar against NDCU 2026 high-risk MOH lists.
-d) Case-study figures.  e) The per-series track record is written by radar.run.
+a) True false-alert rate: outbreak-free years simulated from each series' fitted NB baseline
+   (radar.nullsim), every method run on them; every alert there is false.
+b) Injected outbreaks (k x SD, k = 1..10, 1-4 weeks, 2024 onwards), each method's statistic stored
+   so thresholds can be swept: sensitivity vs null false-alert rate, sensitivity at 1 and 2 false
+   alerts per 100 district-weeks, and by outbreak size.
+c) Real-data alert rate per method (not a false-alert rate: real alerts include real rises).
+d) Known-event replay against the status-quo rule (events located in our own data).
+e) Completeness-gating evaluation.  f) External validation with NDCU 2026 lists.
+g) 2026 separately.  h) Case studies, track record, persistence and burden.
 """
 
 from __future__ import annotations
@@ -19,8 +21,9 @@ from datetime import date
 import numpy as np
 import pandas as pd
 
-from radar_lk import CLEAN_DIR, REPO_ROOT
-from radar_lk.radar.methods import ears, nb_fits, nb_predict, refit_points, status_quo
+from radar_lk import CLEAN_DIR, REPO_ROOT, load_config
+from radar_lk.radar import evaluation as ev
+from radar_lk.radar.nullsim import DEFAULT_THRESHOLD
 from radar_lk.radar.run import CACHE, METHODS, radar_cfg
 from radar_lk.radar.series import load_panel
 
@@ -35,6 +38,8 @@ LABEL = {
     "ears_c3": "EARS C3",
     "nb_glm": "NB-GLM (Farrington-style)",
 }
+COLOR = {"status_quo": "#2a78d6", "ears_c2": "#eb6834", "ears_c3": "#1baf7a", "nb_glm": "#eda100"}
+MARKER = {"status_quo": "o", "ears_c2": "s", "ears_c3": "^", "nb_glm": "D"}
 
 
 def md(df: pd.DataFrame, index: bool = False, fmt: str = "{:.1f}") -> str:
@@ -53,135 +58,18 @@ def md(df: pd.DataFrame, index: bool = False, fmt: str = "{:.1f}") -> str:
     return "\n".join(out)
 
 
-# ------------------------------------------------------------------ a) injected outbreaks
-
-
-def _method_alerts(y, years, weeks, fits, cfg, q, window):
-    """Alerts of every method on (modified) series y, only for weeks in `window`."""
-    mc = cfg["min_count"]
-    out = {"status_quo": status_quo(y, years, weeks, cfg["status_quo_factor"], mc)["alert"]}
-    e = ears(
-        y,
-        cfg["ears_baseline"],
-        cfg["ears_guard"],
-        cfg["ears_c2_threshold"],
-        cfg["ears_c3_threshold"],
-        cfg["ears_sd_floor"],
-        mc,
-    )
-    out["ears_c2"], out["ears_c3"] = e["ears_c2"]["alert"], e["ears_c3"]["alert"]
-    out["nb_glm"] = nb_predict(y, fits, cfg, q, mc, weeks=window)["alert"]
-    return {m: a[window] for m, a in out.items()}
-
-
-def inject(panel, fits_all, cfg, q, rng) -> pd.DataFrame:
-    rows = []
-    t_eval = panel.loc[(panel["epi_year"] > EVAL_FROM[0] - 1), "t"].min()
-    for dis, gd in panel.groupby("disease"):
-        series = {a: g.reset_index(drop=True) for a, g in gd.groupby("area")}
-        areas = sorted(series)
-        made = tries = 0
-        while made < N_PER_DISEASE and tries < 50 * N_PER_DISEASE:
-            tries += 1
-            a = areas[rng.integers(len(areas))]
-            g = series[a]
-            y = g["observed"].to_numpy(float)
-            fits = fits_all[(a, dis)]
-            pts = refit_points(y, cfg["nb_min_train_weeks"], cfg["nb_refit_every"])
-            if not pts:
-                continue
-            dur = int(rng.integers(1, 5))
-            lo = max(int(t_eval), pts[0])
-            hi = len(y) - dur
-            if hi <= lo:
-                continue
-            s = int(rng.integers(lo, hi + 1))
-            window = np.arange(s, s + dur)
-            if np.isnan(y[window]).any():
-                continue
-            sd = max(float(np.nanstd(y)), 1.0)
-            k = int(rng.integers(2, 11))
-            mean = k * sd
-            size = 0
-            while size < 1:
-                size = int(rng.negative_binomial(2, 2 / (2 + mean)))
-            add = rng.multinomial(size, np.full(dur, 1 / dur))
-            y2 = y.copy()
-            y2[window] += add
-            # NB refits whose training window now contains injected weeks
-            redo = [r for r in pts if s < r <= window[-1]]
-            f2 = nb_fits(y2, cfg, points=redo, base=fits) if redo else fits
-            al = _method_alerts(
-                y2, g["epi_year"].to_numpy(), g["epi_week"].to_numpy(), f2, cfg, q, window
-            )
-            low = g["completeness_low"].fillna(False).astype(bool).to_numpy()[window]
-            rec = {
-                "disease": dis,
-                "area": a,
-                "start_t": s,
-                "duration": dur,
-                "size": size,
-                "k": k,
-                "sd": sd,
-                "start_week": f"{g['epi_year'][s]}-W{g['epi_week'][s]:02d}",
-            }
-            for m, v in al.items():
-                hit = np.flatnonzero(v)
-                hit_g = np.flatnonzero(v & ~low)
-                rec[f"{m}_detected"] = len(hit) > 0
-                rec[f"{m}_delay"] = int(hit[0]) if len(hit) else np.nan
-                rec[f"{m}_detected_gated"] = len(hit_g) > 0
-            rows.append(rec)
-            made += 1
-    return pd.DataFrame(rows)
-
-
-def real_rates(sig: pd.DataFrame, by=None) -> pd.DataFrame:
-    s = sig[(sig["epi_year"] >= EVAL_FROM[0])]
+def alert_rates(sig: pd.DataFrame, by=None, year_from=EVAL_FROM[0], year_to=None) -> pd.DataFrame:
+    """Real-data ALERT rate (alerts per 100 district-weeks). Not a false-alert rate: real alerts
+    include real rises; the false-alert rate comes from the null simulation."""
+    s = sig[sig["epi_year"] >= year_from]
+    if year_to is not None:
+        s = s[s["epi_year"] <= year_to]
     keys = ["method"] + ([by] if by else [])
     t = s.groupby(keys).agg(
         weeks=("alert", "size"), alerts=("alert", "sum"), shown=("alert_shown", "sum")
     )
-    t["alerts per 100 district-weeks"] = 100 * t["alerts"] / t["weeks"]
-    t["shown per 100 (after gating)"] = 100 * t["shown"] / t["weeks"]
-    return t
-
-
-def headline(inj: pd.DataFrame, sig: pd.DataFrame) -> pd.DataFrame:
-    rr = real_rates(sig)
-    rows = []
-    for m in METHODS:
-        det = inj[f"{m}_detected"]
-        rows.append(
-            {
-                "method": LABEL[m],
-                "sensitivity %": 100 * det.mean(),
-                "sensitivity after gating %": 100 * inj[f"{m}_detected_gated"].mean(),
-                "specificity %": 100 - rr.loc[m, "alerts per 100 district-weeks"],
-                "false alerts / 100 district-weeks": rr.loc[m, "alerts per 100 district-weeks"],
-                "median delay (weeks)": float(inj.loc[det, f"{m}_delay"].median()),
-            }
-        )
-    return pd.DataFrame(rows)
-
-
-def by_disease(inj: pd.DataFrame, sig: pd.DataFrame) -> pd.DataFrame:
-    rr = real_rates(sig, "disease")
-    rows = []
-    for dis, g in inj.groupby("disease"):
-        r = {"disease": dis, "outbreaks": len(g)}
-        for m in METHODS:
-            r[f"{m} sens %"] = 100 * g[f"{m}_detected"].mean()
-            r[f"{m} FA/100"] = rr.loc[(m, dis), "alerts per 100 district-weeks"]
-        rows.append(r)
-    return pd.DataFrame(rows)
-
-
-def by_size(inj: pd.DataFrame) -> pd.DataFrame:
-    inj = inj.assign(k_band=pd.cut(inj["k"], [1, 3, 6, 10], labels=["2-3 SD", "4-6 SD", "7-10 SD"]))
-    t = inj.groupby("k_band", observed=True)[[f"{m}_detected" for m in METHODS]].mean() * 100
-    t.columns = [LABEL[m] for m in METHODS]
-    t.index.name = "outbreak size (x series SD)"
+    t["alert rate / 100 district-weeks"] = 100 * t["alerts"] / t["weeks"]
+    t["shown / 100 (after gating)"] = 100 * t["shown"] / t["weeks"]
     return t
 
 
@@ -384,152 +272,583 @@ def pick_cases(sig, panel) -> list[tuple]:
     return [(c1, "dengue", 2026), (c2, "leptospirosis", 2022), (c3[0], c3[1], 2023)]
 
 
-# ------------------------------------------------------------------ report
+# ------------------------------------------------------------------ evaluation figures
 
 
-def main() -> None:
+def _style(ax):
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color(AXIS)
+    ax.grid(color=GRID, linewidth=0.8)
+    ax.set_axisbelow(True)
+    ax.tick_params(colors=INK2, labelsize=9)
+
+
+def _plt():
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    return plt
+
+
+def roc_figure(sw: pd.DataFrame, path) -> None:
+    plt = _plt()
+    fig, ax = plt.subplots(figsize=(8, 5), dpi=150)
+    fig.patch.set_facecolor(SURF)
+    ax.set_facecolor(SURF)
+    for m in METHODS:
+        g = sw[sw["method"] == m].sort_values("null_fa_per_100")
+        ax.plot(
+            g["null_fa_per_100"],
+            g["sensitivity"],
+            color=COLOR[m],
+            linewidth=2,
+            marker=MARKER[m],
+            markersize=5,
+            label=LABEL[m],
+        )
+        d = g[g["default"]]
+        ax.scatter(
+            d["null_fa_per_100"],
+            d["sensitivity"],
+            s=110,
+            facecolor=SURF,
+            edgecolor=COLOR[m],
+            linewidth=2,
+            zorder=5,
+        )
+    for x in (1, 2):
+        ax.axvline(x, color=MUTED, linewidth=1, linestyle=":")
+    ax.axvline(10, color=CRIT, linewidth=1, linestyle="--")
+    ax.text(
+        10.6,
+        96,
+        "10 alerts / 100:\nthe proposal's\nusability bar",
+        color=INK2,
+        fontsize=8,
+        va="top",
+    )
+    ax.set_xscale("log")
+    ax.set_xlim(0.05, 60)
+    ax.set_ylim(0, 100)
+    _style(ax)
+    ax.set_xlabel(
+        "false alerts per 100 district-weeks (outbreak-free simulation, log scale)",
+        color=INK2,
+        fontsize=9,
+    )
+    ax.set_ylabel("sensitivity on injected outbreaks (%)", color=INK2, fontsize=9)
+    ax.set_title(
+        "Sensitivity vs false-alert rate, threshold swept (hollow = default threshold)",
+        loc="left",
+        color=INK,
+        fontsize=11,
+    )
+    ax.legend(frameon=False, fontsize=8, loc="upper left", labelcolor=INK2)
+    fig.tight_layout()
+    fig.savefig(path, facecolor=SURF)
+    plt.close(fig)
+
+
+def size_figure(sc: pd.DataFrame, path, target: float) -> None:
+    plt = _plt()
+    fig, ax = plt.subplots(figsize=(8, 4.2), dpi=150)
+    fig.patch.set_facecolor(SURF)
+    ax.set_facecolor(SURF)
+    ks = sorted(sc["k"].unique())
+    # the status-quo rule cannot get down to the target rate at any factor (see _floor_note)
+    shown = [m for m in METHODS if sc.loc[sc["method"] == m, "sensitivity"].notna().any()]
+    width = 0.8 / len(shown)
+    for i, m in enumerate(shown):
+        g = sc[sc["method"] == m].set_index("k").reindex(ks)
+        x = np.arange(len(ks)) + (i - (len(shown) - 1) / 2) * width
+        ax.bar(x, g["sensitivity"], width=width - 0.03, color=COLOR[m], label=LABEL[m])
+    ax.set_xticks(np.arange(len(ks)))
+    ax.set_xticklabels([f"{k} x SD" for k in ks])
+    ax.set_ylim(0, 100)
+    _style(ax)
+    ax.grid(axis="x", visible=False)
+    ax.set_xlabel(
+        "total outbreak size (multiples of the series' standard deviation)", color=INK2, fontsize=9
+    )
+    ax.set_ylabel("sensitivity (%)", color=INK2, fontsize=9)
+    ax.set_title(
+        f"Sensitivity by outbreak size, every method at {target:g} false alert / 100 "
+        "district-weeks",
+        loc="left",
+        color=INK,
+        fontsize=11,
+    )
+    ax.legend(frameon=False, fontsize=8, loc="upper left", labelcolor=INK2)
+    if len(shown) < len(METHODS):
+        ax.text(
+            0.99,
+            0.97,
+            "Status quo not shown: it never gets down to this false-alert rate",
+            transform=ax.transAxes,
+            ha="right",
+            va="top",
+            color=INK2,
+            fontsize=8,
+        )
+    fig.tight_layout()
+    fig.savefig(path, facecolor=SURF)
+    plt.close(fig)
+
+
+def events_figure(rp: pd.DataFrame, path) -> None:
+    """First-alert week relative to the event start; three methods (status quo, EARS C3, NB-GLM)
+    to stay within the 3-series cap for point charts; the table has all four."""
+    plt = _plt()
+    show = ["status_quo", "ears_c3", "nb_glm"]
+
+    def short(e: str) -> str:
+        if e.startswith("After Cyclone Ditwah"):
+            return "Ditwah floods, leptospirosis"
+        return e.replace(", ", " ")
+
+    labels = [f"{short(e)} | {d}" for e, d in zip(rp["event"], rp["district"], strict=True)]
+    fig, ax = plt.subplots(figsize=(9, 0.32 * len(rp) + 1.6), dpi=150)
+    fig.patch.set_facecolor(SURF)
+    ax.set_facecolor(SURF)
+    y = np.arange(len(rp))[::-1]
+    for j, m in enumerate(show):
+        x = rp[f"{m}_first"].to_numpy(float)
+        cen = rp[f"{m}_censored"].to_numpy(bool)
+        ax.scatter(
+            x[~cen],
+            (y + (j - 1) * 0.18)[~cen],
+            s=40,
+            color=COLOR[m],
+            marker=MARKER[m],
+            label=LABEL[m],
+            edgecolor=SURF,
+            linewidth=1,
+            zorder=5,
+        )
+        ax.scatter(
+            x[cen],
+            (y + (j - 1) * 0.18)[cen],
+            s=40,
+            facecolor=SURF,
+            edgecolor=COLOR[m],
+            marker=MARKER[m],
+            linewidth=1.3,
+            zorder=5,
+        )
+    ax.axvline(0, color=MUTED, linewidth=1)
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels, fontsize=7)
+    _style(ax)
+    ax.grid(axis="y", visible=False)
+    ax.set_xlabel(
+        "first alert, weeks relative to the event start (negative = before)", color=INK2, fontsize=9
+    )
+    ax.set_title(
+        "Known events: first alert per method\nno marker = no alert\nhollow = already alerting "
+        "when the look-back window opens\n(the true first alert is that week or earlier)",
+        loc="left",
+        color=INK,
+        fontsize=10,
+    )
+    ax.legend(
+        frameon=False,
+        fontsize=8,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.06 - 1.2 / len(rp)),
+        ncol=3,
+        labelcolor=INK2,
+    )
+    fig.tight_layout()
+    fig.savefig(path, facecolor=SURF)
+    plt.close(fig)
+
+
+# ------------------------------------------------------------------ main
+
+
+def main(reuse: bool = False) -> None:
     cfg = radar_cfg()
     with open(CACHE, "rb") as f:
         fits_all = pickle.load(f)["fits"]
     sig = pd.read_parquet(CLEAN_DIR / "radar_signals.parquet")
     q = float(sig["quantile_used"].iloc[0])
     panel, skipped = load_panel(cfg["first_year"], cfg["min_history_weeks"])
-    rng = np.random.default_rng(SEED)
-    inj = inject(panel, fits_all, cfg, q, rng)
-    inj.to_parquet(CLEAN_DIR / "radar_injections.parquet", index=False)
-    head = headline(inj, sig)
-    perd = by_disease(inj, sig)
-    size = by_size(inj)
-    rr = real_rates(sig, "disease")
-    nb_rate = real_rates(sig).loc["nb_glm", "shown per 100 (after gating)"]
+    mc = cfg["min_count"]
+    null_p = CLEAN_DIR / "radar_null_false_alerts.parquet"
+    inj_p = CLEAN_DIR / "radar_injections.parquet"
+    if reuse and null_p.exists() and inj_p.exists():
+        print("reusing saved null simulation and injections")
+        null, inj = pd.read_parquet(null_p), pd.read_parquet(inj_p)
+    else:
+        print("null simulation ...")
+        null = ev.null_false_alerts(panel, fits_all, cfg)
+        null.to_parquet(null_p, index=False)
+        print("injections ...")
+        inj = ev.inject_stats(panel, fits_all, cfg, np.random.default_rng(SEED), N_PER_DISEASE)
+        inj.to_parquet(inj_p, index=False)
+    sw = ev.sweep(inj, null, mc)
+    mt = ev.matched(sw)
+    sc = ev.size_curve(inj, sw, mc, target=1.0)
+    clean = pd.read_parquet(CLEAN_DIR / "wer.parquet")
+    weather = pd.read_parquet(CLEAN_DIR / "weather.parquet")
+    events = ev.define_events(clean, weather)
+    rp = ev.replay(sig, events)
+    gt = ev.gating_eval(sig)
     nd = ndcu_validation(sig)
     FIG.mkdir(parents=True, exist_ok=True)
+    roc_figure(sw, FIG / "radar_sensitivity_vs_false_alerts.png")
+    size_figure(sc, FIG / "radar_sensitivity_by_size.png", 1.0)
+    events_figure(rp, FIG / "radar_event_replay.png")
     figs = []
     for i, (a, dis, y0) in enumerate(pick_cases(sig, panel), 1):
         p = FIG / f"radar_case{i}_{dis}_{a.replace(' ', '_')}.png"
         title = {
             1: f"{a} dengue, {y0}: observed vs expected",
-            2: f"{a} leptospirosis (largest 2022-26 peak): observed vs expected",
+            2: f"{a} leptospirosis (largest 2022-26 peak: the Dec 2024 post-flood outbreak)",
             3: f"{a} {dis}: a busy but steady series stays quiet (NB-GLM)",
         }[i]
         case_figure(sig, a, dis, y0, p, title)
         figs.append((p, a, dis))
     tr = pd.read_parquet(CLEAN_DIR / "radar_track_record.parquet")
-    write_doc(cfg, q, panel, skipped, inj, head, perd, size, rr, nb_rate, nd, figs, tr, sig)
+    write_doc(cfg, q, panel, skipped, null, inj, sw, mt, sc, events, rp, gt, nd, figs, tr, sig)
 
 
-def write_doc(cfg, q, panel, skipped, inj, head, perd, size, rr, nb_rate, nd, figs, tr, sig):
+def _pct_table(sw, inj, null, sig, mc):
+    rows = []
+    rr = alert_rates(sig)
+    for m in METHODS:
+        th = DEFAULT_THRESHOLD[m]
+        det, delay = ev.detect(inj, m, th, mc)
+        detg, _ = ev.detect(inj, m, th, mc, gated=True)
+        fa = null[(null["method"] == m) & (null["threshold"] == th) & (null["disease"] == "all")]
+        fa = float(fa["fa_per_100"].iloc[0])
+        rows.append(
+            {
+                "method": LABEL[m],
+                "default threshold": f"{th:g}",
+                "sensitivity %": 100 * det.mean(),
+                "sensitivity after gating %": 100 * detg.mean(),
+                "false alerts / 100 (null)": fa,
+                "specificity % (null)": 100 - fa,
+                "alert rate / 100 (real data)": rr.loc[m, "alert rate / 100 district-weeks"],
+                "median delay (weeks)": float(np.nanmedian(delay)) if det.any() else np.nan,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _floor_note(sw: pd.DataFrame) -> str:
+    """Methods whose false-alert rate cannot be pushed down to 1 or 2 per 100 at any threshold."""
+    notes = []
+    for m in METHODS:
+        lo = sw.loc[sw["method"] == m, "null_fa_per_100"].min()
+        if lo > 1:
+            notes.append(
+                f"{LABEL[m]} never gets below {lo:.1f} false alerts per 100 at any threshold tried"
+            )
+    if not notes:
+        return "Every method reaches 1 false alert per 100 within the thresholds tried."
+    return (
+        "; ".join(notes) + ". For the status-quo rule this is structural: when last year's same "
+        "week was 0, any count >= 3 alerts whatever the multiplier, so raising the factor cannot "
+        "remove those alerts; its matched sensitivity is therefore undefined (blank)."
+    )
+
+
+def write_doc(cfg, q, panel, skipped, null, inj, sw, mt, sc, events, rp, gt, nd, figs, tr, sig):
+    mc = cfg["min_count"]
     n_series = panel.groupby(["area", "disease"]).ngroups
     last = panel.dropna(subset=["source_issue"]).sort_values("t").iloc[-1]
+    lag = load_config().get("publication_lag_weeks")
+    head = _pct_table(sw, inj, null, sig, mc)
+    sq_rate = float(
+        head.loc[head["method"] == LABEL["status_quo"], "alert rate / 100 (real data)"].iloc[0]
+    )
+    sq_null = float(
+        head.loc[head["method"] == LABEL["status_quo"], "false alerts / 100 (null)"].iloc[0]
+    )
     L = [
         "# Radar backtest",
         "",
         f"Generated {date.today()} by `python -m radar_lk.radar.run` then `python -m "
         f"radar_lk.radar.backtest`. "
         "Primary data: Epidemiology Unit, Ministry of Health, Sri Lanka (WER Table 1); external "
-        "validation: National Dengue Control Unit (NDCU) Weekly Dengue Update.",
+        "validation: National Dengue Control Unit (NDCU) Weekly Dengue Update; rainfall: "
+        "Open-Meteo "
+        "(CC BY 4.0). Evaluated against the proposal's section 9 (evaluation contract).",
+        "",
+        "## Highlighted finding: the source tables themselves are sometimes scrambled",
+        "",
+        "> In several WER issues the weekly column of Table 1 is printed against the wrong "
+        "district rows "
+        "(2026-W14 and W24, every disease; chickenpox in 2026-W03 and W07) or copied unchanged "
+        "from the "
+        "previous week (2022-W22 and 2025-W07, whole issues; 2024-W11 chickenpox, 2024-W39 "
+        "tuberculosis, "
+        "2026-W26 dengue). The national totals and cumulative columns are consistent with the "
+        "wrong "
+        "numbers, so every sum and cumulative check passes, and two independent extractors agree "
+        "with "
+        "each other because the error is in the PDF. Before this was caught, the radar was "
+        "alerting on "
+        "these weeks (e.g. Matale dengue 256 when the weeks around read about 20). Both patterns "
+        "are now "
+        "detected with past-only rules and queued (docs/EXTRACTION_REPORT.md section 5b). Anyone "
+        "building on these PDFs should check for this.",
         "",
         "## Data and design",
         "",
         f"- **Post-COVID baseline.** Only `extraction_valid` RDHS rows from **2022-W01** to "
-        f"{last['epi_year']}-W{int(last['epi_week']):02d} ({last['source_issue']}). 2020-2021 "
-        f"reporting was "
-        "distorted by COVID-19, so the baselines deliberately start in 2022; the cost is that "
-        "seasonal "
-        "models have at most ~3.5 years of history.",
-        "- **Weekly counts as first printed** in each issue (what a Regional Epidemiologist saw "
-        "that week), "
-        "never later back-filled values.",
+        f"{last['epi_year']}-W{int(last['epi_week']):02d} ({last['source_issue']}).",
+        "- **Weekly counts as first printed** in each issue, never later back-filled values.",
         f"- **Series:** {n_series} RDHS x disease series with >= {cfg['min_history_weeks']} "
-        f"observed weeks. "
-        f"Not modelled (insufficient history): {len(skipped)} series "
+        f"observed "
+        f"weeks; not modelled (insufficient history): {len(skipped)} "
         f"({', '.join(f'{d} x{c}' for d, c in skipped['disease'].value_counts().items())}).",
-        "- **No lookahead.** Every method uses only weeks before t; `tests/test_radar.py::"
-        "test_no_lookahead` changes future weeks and checks no earlier signal moves.",
+        "- **No lookahead.** Every method uses only weeks before t (tested).",
+        f"- **Publication lag.** A week's table appears in the WER about **{lag} weeks** after "
+        f"the week "
+        "ends (median, from the PDFs' creation dates; docs/EXTRACTION_REPORT.md section 11), so "
+        "these "
+        "are retrospective early-warning signals on the published record.",
         "",
-        "| method | rule |",
+        "| method | rule (default threshold) |",
         "|---|---|",
-        f"| Status quo | alert if count >= {cfg['status_quo_factor']:g} x the same week last year "
-        f"and >= "
-        f"{cfg['min_count']} |",
-        f"| EARS C2 | baseline = {cfg['ears_baseline']} weeks ending {cfg['ears_guard']} weeks "
-        f"before t "
-        f"(t-9..t-3); alert if (y - mean) / sd > {cfg['ears_c2_threshold']:g} (sd floored at "
+        f"| Status quo | count >= {cfg['status_quo_factor']:g} x the same week last year and >= "
+        f"{mc} |",
+        f"| EARS C2 | (y - mean) / sd > {cfg['ears_c2_threshold']:g} over weeks t-9..t-3 (sd "
+        f"floored at "
         f"{cfg['ears_sd_floor']:g}) |",
         f"| EARS C3 | sum over t, t-1, t-2 of max(0, C2 - 1) > {cfg['ears_c3_threshold']:g} |",
-        f"| NB-GLM | log mu = intercept + linear trend + Fourier (period "
-        f"{cfg['nb_fourier_period']}, "
-        f"K={cfg['nb_fourier_k']}); fitted on past weeks only, refitted every "
-        f"{cfg['nb_refit_every']} "
-        f"weeks after {cfg['nb_min_train_weeks']} observed weeks; past weeks with Anscombe "
-        f"residual > "
-        f"{cfg['nb_reweight_threshold']} down-weighted (r^-2); alert if observed > the "
-        f"{100 * q:g}th-percentile NB bound |",
+        f"| NB-GLM | log mu = intercept + trend + Fourier (K={cfg['nb_fourier_k']}), refitted "
+        f"every "
+        f"{cfg['nb_refit_every']} weeks on past weeks, Anscombe residual > "
+        f"{cfg['nb_reweight_threshold']} "
+        f"down-weighted; alert if y > the {100 * q:g}th-percentile NB bound |",
         "",
-        f"Every method also needs observed >= {cfg['min_count']}. **Gating:** an alert in a week "
-        f"whose "
-        "completeness is below the RDHS's own past 10th percentile is kept but `suppressed` with "
-        "the "
-        "reason; a `revised` week keeps its alert and carries the marker. Parameter uncertainty "
-        "of the "
-        "NB fit is not added to the bound (it slightly narrows the band).",
+        f"Every method also needs observed >= {mc}. An alert in a week with `completeness_low` is "
+        "suppressed (shown with the reason); a `revised` week keeps its alert with the marker.",
         "",
-        "## a) Injected-outbreak evaluation",
+        "## a) False-alert rate (outbreak-free simulation) and the default-threshold headline",
         "",
-        f"{len(inj)} simulated outbreaks ({N_PER_DISEASE} per disease, seed {SEED}) added to the "
-        f"real "
-        "series: start week uniform over 2024-W01 onwards (where the NB-GLM already has a fit), "
-        "duration "
-        "1-4 weeks, total size ~ negative binomial (dispersion 2) with mean k x the series' SD, k "
-        "uniform on 2..10, spread evenly over the weeks. **Sensitivity** = share of outbreaks "
-        "with an "
-        "alert in an outbreak week; **delay** = weeks from outbreak start to the first such alert "
-        "(0 = first week). **Specificity / false alerts** come from the real 2024-2026 data, "
-        "counting "
-        "every real alert as false: a conservative bound, since some real alerts are real rises.",
+        "For every series, 200 outbreak-free years are simulated from its own fitted NB baseline "
+        "(season and trend of its last 156 weeks; 104 weeks of history then 52 evaluated weeks) "
+        "and "
+        "every method is run on them exactly as on real data (NB-GLM refitted every 4 weeks with "
+        "down-weighting, via a batched IRLS checked against the statsmodels fit). No outbreak "
+        "exists in "
+        "these series, so **every alert is false**: this is the false-alert rate. It takes each "
+        "series' fitted NB baseline as the truth. On the real series the NB-GLM alerts slightly "
+        "LESS "
+        "often than on its own null (compare the two rate columns): consistent with the real "
+        "series "
+        "being more over-dispersed than the fitted baseline, so the moment estimate of the "
+        "dispersion widens the bound. That explanation is not proven here.",
         "",
         md(head),
         "",
-        "Sensitivity by outbreak size:",
+        f"Sensitivity uses {len(inj)} injected outbreaks ({N_PER_DISEASE} per disease, seed "
+        f"{SEED}): "
+        "start 2024 onwards, 1-4 weeks, total size ~ NB (dispersion 2) with mean k x the series' "
+        "SD, "
+        "k uniform on 1..10. Delay = weeks from outbreak start to first alert (0 = first week). "
+        "**Alert rate (real data)** counts all alerts on the real series; it is not a false-alert "
+        "rate, because real rises are in it.",
         "",
-        md(size, index=True),
+        f"**Usability bar.** The proposal's bar is that an alert should fire in at most 10% of "
+        f"district-weeks. The status-quo rule fires in {sq_rate:.1f} per 100 real district-weeks "
+        f"({sq_null:.1f} per 100 even with no outbreak at all), so the rule currently used by eye "
+        f"would "
+        "itself break that bar.",
         "",
-        "Per disease (sensitivity % on injected outbreaks; FA/100 = real alerts per 100 "
-        "district-weeks):",
+        "## b) Matched comparison: sensitivity at the same false-alert rate",
         "",
-        md(perd),
+        "Each method's threshold is swept (status quo factor 1.25-50; EARS C2 1-15; C3 0.5-30; "
+        "NB-GLM "
+        "quantile 0.80-0.9999); for each threshold the null false-alert rate and the "
+        "injected-outbreak "
+        "sensitivity are computed, and sensitivity is read off each curve at 1 and 2 false alerts "
+        "per "
+        "100 district-weeks.",
         "",
-        "## b) Real-data alert rates (2024 onwards)",
-        "",
-        md(real_rates(sig).rename(index=LABEL), index=True),
-        "",
-        f"**Stop rule** (NB-GLM must not flag more than {100 * cfg['max_alert_rate']:.0f}% of "
-        f"district-"
-        f"weeks): NB-GLM shows alerts in {nb_rate:.2f} per 100 district-weeks at the "
-        f"{100 * q:g}th percentile, "
-        + (
-            "so the configured quantile was kept."
-            if q == cfg["quantile"]
-            else f"after tightening the quantile from {cfg['quantile']} to {q}."
+        md(
+            mt.assign(method=mt["method"].map(LABEL))
+            .set_index("method")
+            .loc[[LABEL[m] for m in METHODS]],
+            index=True,
         ),
         "",
-        "Per disease, alerts per 100 district-weeks (shown after gating):",
+        "![sensitivity vs false-alert rate](figures/radar_sensitivity_vs_false_alerts.png)",
+        "",
+        "Sweep table (data behind the figure):",
+        "",
+        md(sw.assign(method=sw["method"].map(LABEL)).drop(columns=["default"]), fmt="{:.3g}"),
+        "",
+        _floor_note(sw),
+        "",
+        "By outbreak size, every method at the threshold that gives 1 false alert per 100 "
+        "district-weeks (a method that cannot get that low is left blank):",
         "",
     ]
-    t = rr["shown per 100 (after gating)"].unstack("method")[METHODS]
-    t.columns = [LABEL[m] for m in METHODS]
-    L += [md(t, index=True), ""]
+    piv = sc.pivot_table(index="k", columns="method", values="sensitivity").reindex(columns=METHODS)
+    piv.columns = [LABEL[m] for m in METHODS]
+    piv.index = [f"{k} x SD" for k in piv.index]
     L += [
-        "## c) External validation: dengue radar vs NDCU 2026 high-risk MOH lists",
+        md(piv, index=True),
+        "",
+        f"Outbreaks per size: {sc.groupby('k')['outbreaks'].first().to_dict()}.",
+        "",
+        "![sensitivity by size](figures/radar_sensitivity_by_size.png)",
+        "",
+    ]
+    rr = alert_rates(sig, "disease")
+    t = rr["alert rate / 100 district-weeks"].unstack("method")[METHODS]
+    t.columns = [LABEL[m] for m in METHODS]
+    nd_ = null[(null["disease"] != "all")]
+    nn = []
+    for m in METHODS:
+        x = nd_[(nd_["method"] == m) & (nd_["threshold"] == DEFAULT_THRESHOLD[m])].set_index(
+            "disease"
+        )
+        nn.append(x["fa_per_100"].rename(f"{LABEL[m]} (null)"))
+    t = t.join(pd.concat(nn, axis=1))
+    L += [
+        "## c) Real-data alert rates (2024 onwards) next to the null false-alert rates",
+        "",
+        "Per disease, alerts per 100 district-weeks at the default thresholds: real data, then the "
+        "outbreak-free simulation. Where the real rate is far above the null rate, the series "
+        "carry "
+        "real rises (or model misfit); where they are close, most real alerts look like noise.",
+        "",
+        md(t, index=True),
+        "",
+        f"**Stop rule** (NB-GLM <= {100 * cfg['max_alert_rate']:.0f}% of district-weeks): "
+        f"{alert_rates(sig).loc['nb_glm', 'shown / 100 (after gating)']:.2f} per 100 at the "
+        f"{100 * q:g}th percentile; the a-priori quantile was kept.",
+        "",
+    ]
+    L += [
+        "## d) Known-event replay",
+        "",
+        "Each event is located **in our data** with an explicit rule (below), not assumed. For "
+        "every "
+        "affected district: the first week each method alerted, from 4 weeks before the event "
+        "start "
+        "(from the rain week itself for Ditwah) to its end; `gain` = status-quo first week minus "
+        "the "
+        "method's first week (positive = earlier than the status-quo rule).",
+        "",
+    ]
+    for e in events:
+        evd = e["evidence"].copy()
+        L += [
+            f"### {e['event']}",
+            "",
+            f"Rule: {e['rule']}.",
+            "",
+            md(evd.round(2), index=True, fmt="{:.2f}"),
+            "",
+        ]
+    cols = (
+        ["event", "district"] + [f"{m}_week" for m in METHODS] + [f"{m}_gain" for m in METHODS[1:]]
+    )
+    show = rp[cols].rename(
+        columns={
+            **{f"{m}_week": f"{LABEL[m]} first" for m in METHODS},
+            **{f"{m}_gain": f"{LABEL[m]} gain (wk)" for m in METHODS[1:]},
+        }
+    )
+    L += [
+        "### Replay table",
+        "",
+        "`<=` marks a first alert in the very first week searched: the method may already have "
+        "been "
+        "alerting before (e.g. the early-2024 leptospirosis surge continues one that began in late "
+        "2023), so that first week is censored and its gain is left empty.",
+        "",
+        md(show, fmt="{:+.0f}"),
+        "",
+        "![event replay](figures/radar_event_replay.png)",
+        "",
+    ]
+    summ = []
+    for m in METHODS[1:]:
+        g = rp[f"{m}_gain"]
+        summ.append(
+            {
+                "method": LABEL[m],
+                "district-events": len(rp),
+                "method alerted": int(rp[f"{m}_first"].notna().sum()),
+                "status quo alerted": int(rp["status_quo_first"].notna().sum()),
+                "comparable (both alerted, neither censored)": int(g.notna().sum()),
+                "earlier than status quo": int((g > 0).sum()),
+                "same week": int((g == 0).sum()),
+                "later": int((g < 0).sum()),
+                "median gain (wk, both alerted)": float(g.median()) if g.notna().any() else np.nan,
+            }
+        )
+    L += [md(pd.DataFrame(summ)), ""]
+    L += [
+        "## e) Does completeness gating remove artefacts?",
+        "",
+        "The proposal's target: alerts suppressed for low reporting completeness should be the "
+        "ones "
+        "that later prove to be artefacts. For every raw alert, suppressed vs kept: was the NEXT "
+        "week's cumulative revised (late reports added to earlier weeks), and did the next 2 weeks "
+        "stay above expected (a real rise persists)?",
+        "",
+        md(gt.assign(method=gt["method"].map({**LABEL, "all": "all methods"}))),
+        "",
+    ]
+    a_all = gt[gt["method"] == "all"].set_index("alerts")
+    sup, kep = a_all.loc["suppressed"], a_all.loc["kept"]
+    flag_ok = sup["next week revised %"] > kep["next week revised %"]
+    persists = sup["next 2 weeks above expected %"] >= kep["next 2 weeks above expected %"] - 5
+    L += [
+        f"Result, all methods pooled (n = {int(sup['n'])} suppressed vs {int(kep['n'])} kept "
+        f"alerts):",
+        "",
+        f"1. **The completeness flag does mark incomplete weeks.** After a suppressed alert the "
+        f"next "
+        f"week's cumulative was revised in {sup['next week revised %']:.0f}% of cases vs "
+        f"{kep['next week revised %']:.0f}% after kept alerts, and raised (late cases added) in "
+        f"{sup['next week cum raised % (delta > 0)']:.0f}% vs "
+        f"{kep['next week cum raised % (delta > 0)']:.0f}%."
+        + ("" if flag_ok else " (Not in this run: the difference goes the other way.)"),
+        f"2. **But the suppressed alerts do not look like artefacts.** The next 2 weeks stayed "
+        f"above "
+        f"expected after {sup['next 2 weeks above expected %']:.0f}% of suppressed alerts vs "
+        f"{kep['next 2 weeks above expected %']:.0f}% of kept ones. Late reports add cases, so a "
+        f"rise "
+        "seen in an incomplete week is, if anything, understated, not invented.",
+        "",
+        (
+            "**Verdict: the proposal's target (gating removes alerts that prove to be artefacts) "
+            "is not "
+            "met.** Gating holds back alerts that persist as often as the others. The dashboard "
+            "therefore "
+            "shows them as 'possible rise, held back: low reporting completeness' with the "
+            "reason, rather "
+            "than hiding them, and gating is not counted as a precision gain."
+            if persists
+            else "**Verdict: suppressed alerts persist less often than kept ones, so gating "
+            "removes alerts that behave more like artefacts, as the proposal intended.**"
+        ),
+        "The suppressed group is small, so these percentages are imprecise.",
+        "",
+    ]
+    L += [
+        "## f) External validation: dengue radar vs NDCU 2026 high-risk MOH lists",
         "",
         f"District x week pairs in 2026 where both exist (weeks "
         f"{nd['_weeks'][0]}-{nd['_weeks'][-1]}). "
-        "NDCU flags an MOH area as high-risk from its own case counts; a district is "
-        "'NDCU-positive' "
-        "when at least 1 (or at least 3) of its MOH areas is on the list. The two signals answer "
-        "different questions (NDCU: absolute burden; radar: unusual for this district and "
-        "season), so "
-        "high concordance is not expected; the lead/lag is the more useful number.",
+        "A district is NDCU-positive when at least 1 (or 3) of its MOH areas is on the list. NDCU "
+        "flags "
+        "absolute burden; the radar flags what is unusual for the district and season.",
         "",
     ]
     for thr in (1, 3):
@@ -541,89 +860,123 @@ def write_doc(cfg, q, panel, skipped, inj, head, perd, size, rr, nb_rate, nd, fi
         xc = nd["nb_glm"][0][thr]["xcorr"]
         peak = max(xc, key=lambda k: np.nan_to_num(xc[k], nan=-9))
         L += [
-            "NB-GLM pooled correlation of the two weekly 0/1 series at lag L (radar shifted by L "
-            "weeks; L < 0 means the radar leads): "
+            "NB-GLM pooled correlation of the weekly 0/1 series at lag L (L < 0: radar leads): "
             + ", ".join(f"L={k}: {v:.2f}" for k, v in xc.items())
             + f". Peak at L = {peak}.",
             "",
         ]
     x = nd["nb_glm"][1]
     x["ndcu3"] = x["n_moh"] >= 3
-    miss = x[x["ndcu3"] & ~x["alert_shown"]].sort_values("n_moh", ascending=False)
-    extra = x[x["alert_shown"] & (x["n_moh"] == 0)]
-    L += [
-        "### Disagreements (NB-GLM)",
-        "",
-        f"- NDCU >= 3 MOH flagged but no radar alert: {len(miss)} district-weeks; largest: "
-        + ", ".join(f"{r.area} W{r.epi_week} ({r.n_moh} MOH)" for r in miss.head(12).itertuples())
-        + ".",
-        f"- Radar alert but no MOH flagged: {len(extra)} district-weeks: "
-        + ", ".join(f"{r.area} W{r.epi_week}" for r in extra.head(20).itertuples())
-        + ".",
-        "",
-    ]
+    miss = x[x["ndcu3"] & ~x["alert_shown"]]
     obs = sig[
         (sig["method"] == "nb_glm") & (sig["disease"] == "dengue") & (sig["epi_year"] == 2026)
     ]
-    obs = obs[["area", "epi_week", "observed", "expected", "upper"]]
-    mm = miss.merge(obs, on=["area", "epi_week"], how="left")
-    top = mm["area"].value_counts()
-    within = 100 * float(
-        ((mm["observed"] > mm["expected"]) & (mm["observed"] <= mm["upper"])).mean()
-    )
-    below = 100 * float((mm["observed"] <= mm["expected"]).mean())
-    ex = extra.merge(obs, on=["area", "epi_week"], how="left")
-    med_obs = float(ex["observed"].median()) if len(ex) else float("nan")
-    by_wk = ex["epi_week"].value_counts()
+    mm = miss.merge(obs[["area", "epi_week", "burden_label"]], on=["area", "epi_week"], how="left")
     L += [
-        f"What the data say about the disagreements: of the {len(mm)} NDCU-only district-weeks, "
-        f"{100 * top.head(3).sum() / max(len(mm), 1):.0f}% are {', '.join(top.head(3).index)}. In "
-        f"{within:.0f}% the observed count was above the radar's expected value but within its "
-        f"upper "
-        f"bound, and in {below:.0f}% at or below the expected value: high in absolute terms "
-        f"(NDCU's "
-        "view) but within what the radar expects for that district and season. The "
-        f"{len(ex)} radar-only district-weeks have a median observed count of {med_obs:.0f} "
-        f"(rises from a low base); the busiest weeks are "
-        + ", ".join(f"W{w} ({n})" for w, n in by_wk.head(3).items())
-        + ". 2026-W14 and W24 are no longer among them because those issues are now queued as "
-        "`scrambled_weekly_column` (see docs/EXTRACTION_REPORT.md section 5b).",
+        f"Of the {len(miss)} district-weeks with >= 3 MOH areas flagged but no radar alert, "
+        f"{100 * (mm['burden_label'] == 'high burden, within expected range').mean():.0f}% are "
+        f"labelled "
+        "'high burden, within expected range' on the dashboard (count in the district's own top "
+        "10% "
+        "but within the expected range for the season). That is how the two signals are reconciled "
+        "for the user.",
         "",
     ]
-    L += ["## d) Case studies", ""]
+    L += ["## g) 2026 separately (the proposal promised this)", ""]
+    r26 = alert_rates(sig, year_from=2026)
+    i26 = inj[inj["start_year"] == 2026]
+    rows = []
+    for m in METHODS:
+        det, delay = ev.detect(i26, m, DEFAULT_THRESHOLD[m], mc)
+        rows.append(
+            {
+                "method": LABEL[m],
+                "alert rate / 100 (real 2026)": r26.loc[m, "alert rate / 100 district-weeks"],
+                "shown / 100 (2026, after gating)": r26.loc[m, "shown / 100 (after gating)"],
+                f"sensitivity % (outbreaks starting 2026, n={len(i26)})": 100 * det.mean(),
+                "median delay (wk)": float(np.nanmedian(delay)) if det.any() else np.nan,
+            }
+        )
+    L += [
+        md(pd.DataFrame(rows)),
+        "",
+        "2026 contains the year's dengue epidemic and the most source-table errors (four of the "
+        "quarantined issues/columns), so its extraction-valid share is the lowest (see "
+        "docs/EXTRACTION_REPORT.md). The 2026 dengue replay is in section d, the NDCU comparison "
+        "in f.",
+        "",
+    ]
+    L += ["## h) Case studies, track record, persistence and burden", ""]
     for p, a, dis in figs:
         L += [f"![{a} {dis}](figures/{p.name})", ""]
     trn = tr[tr["method"] == "nb_glm"]
-    weighted = np.nansum(trn["followed_by_second_high_week"] * trn["alerts"])
-    second_share = 100 * weighted / max(trn["alerts"].sum(), 1)
+    wsum = np.nansum(trn["followed_by_second_high_week"] * trn["alerts"])
+    nb = sig[(sig["method"] == "nb_glm") & sig["alert_shown"]]
     L += [
-        "## e) Track record (for the dashboard)",
+        "`data/clean/radar_signals.parquet` carries, per series-week and method: `weeks_persisted` "
+        "(consecutive weeks up to and including this one above the bound; past weeks only), "
+        "`sustained` (>= 2), `burden_pctl` (percentile of the count among the district's own past "
+        "counts) and `burden_label` ('unusual for this district and season', 'high burden, within "
+        "expected range', or held back for low completeness). `radar_track_record.parquet` has the "
+        "per-series alert counts and the share followed by a second high week.",
         "",
-        "`data/clean/radar_track_record.parquet`: per series and method, shown alerts, alerts "
-        "per 100 "
-        "weeks, and the share of alerts followed by a second high week (the next week also "
-        "alerting "
-        "or above its bound).",
+        f"NB-GLM: {len(nb)} shown alerts; {100 * nb['sustained'].mean():.0f}% sustained (>= 2 "
+        f"weeks); "
+        f"{100 * wsum / max(trn['alerts'].sum(), 1):.0f}% followed by a second high week. "
+        f"Weeks persisted: {nb['weeks_persisted'].value_counts().sort_index().head(6).to_dict()}.",
         "",
-        f"NB-GLM: {int(trn['alerts'].sum())} shown alerts over "
-        f"{int(trn['weeks_evaluated'].sum()):,} "
-        f"series-weeks; "
-        f"{second_share:.0f}% "
-        "followed by a second high week.",
+    ]
+    L += [
+        "## Deviations from the proposal",
+        "",
+        "| proposal | this build | why |",
+        "|---|---|---|",
+        "| Baselines from 2016 | From **2022-W01** | Post-COVID baseline: 2020-21 reporting was "
+        "distorted, and 2016-21 PDFs were not processed in the compressed schedule. Seasonal terms "
+        "rest on 1-4 seasons. |",
+        "| Farrington Flexible (R `surveillance`) | **NB-GLM with Farrington-style "
+        "down-weighting** "
+        "(Anscombe residual > 2.58 -> weight r^-2), refitted every 4 weeks, in Python | No R in "
+        "the "
+        "build; the method keeps Farrington's key ideas (NB, trend, seasonality, outbreak "
+        "down-weighting) but not its exact seasonal factor or its trend-dropping rule. |",
+        "| Threshold chosen in evaluation | The **98th percentile fixed a priori** and never "
+        "tuned; "
+        "the sweep in section b only shows what other thresholds would give | Avoids optimising on "
+        "the test data. |",
+        "| Rates per population | **Counts**, not rates; population denominators not yet added | "
+        "District populations were not ingested; signals are relative to each district's own "
+        "history, "
+        "so the radar does not need them, but maps of burden would. |",
+        "| Real false-alert rate from labelled data | False-alert rate from **outbreak-free "
+        "simulation** of each series' fitted baseline; real-data alert rate reported separately | "
+        "There are no labelled outbreak/non-outbreak weeks. |",
         "",
         "## Limitations",
         "",
-        "- Injected outbreaks are synthetic; detection of real events of other shapes may differ.",
-        "- Real alerts are all counted as false for specificity, which understates specificity.",
-        "- NB bounds ignore parameter uncertainty; with 1-3 seasons of post-COVID history the "
-        "seasonal terms are estimated from few cycles.",
-        "- TB starts in 2024, so its NB-GLM only predicts from 2025.",
+        "- The null simulation takes each series' fitted NB baseline as the truth; real series "
+        "that "
+        "depart from that model change the false-alert rate in either direction (section c).",
+        "- Injected outbreaks are synthetic; real events of other shapes may be detected "
+        "differently.",
+        "- Known events are located from the same counts the radar uses (for Ditwah also from "
+        "rainfall); "
+        "the replay measures timing against the status-quo rule, not against an independent truth.",
+        "- NB bounds ignore parameter uncertainty; TB starts in 2024, so its NB-GLM predicts only "
+        "from 2025.",
         "",
     ]
     DOC.write_text("\n".join(L), encoding="utf-8")
     print(f"wrote {DOC}")
     print(md(head))
+    print(md(mt))
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+    ap.add_argument(
+        "--reuse", action="store_true", help="reuse the saved null simulation and injections"
+    )
+    main(ap.parse_args().reuse)

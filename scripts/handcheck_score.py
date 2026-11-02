@@ -1,6 +1,6 @@
 """Score the filled hand-check pack and put the result into docs/EXTRACTION_REPORT.md.
 
-    python scripts/handcheck_score.py [data/handcheck/v2/handcheck.csv]
+    python scripts/handcheck_score.py [CSV ...]   # several filled packs are pooled
 
 Reads `verified` (Y/N) and `actual_value`; writes docs/handcheck_result.md (which the report
 generator embeds on every rerun) and replaces the hand-check section of the current report.
@@ -39,8 +39,15 @@ def _rel(p: Path) -> str:
         return p.as_posix()
 
 
-def score(csv_path: Path) -> str:
-    df = pd.read_csv(csv_path, dtype={"verified": str, "actual_value": str, "notes": str})
+def score(csv_paths: Path | list[Path]) -> str:
+    paths = [csv_paths] if isinstance(csv_paths, Path) else list(csv_paths)
+    parts = []
+    for p in paths:
+        d = pd.read_csv(p, dtype={"verified": str, "actual_value": str, "notes": str})
+        d.insert(0, "pack", p.parent.name)
+        parts.append(d)
+    df = pd.concat(parts, ignore_index=True)
+    csv_path = paths[0] if len(paths) == 1 else None
     v = df["verified"].fillna("").str.strip().str.upper()
     bad = v[~v.isin(["Y", "N", ""])]
     if len(bad):
@@ -52,8 +59,9 @@ def score(csv_path: Path) -> str:
     lines = [
         "## Hand-check (manual verification against the rendered page)",
         "",
-        f"Scored {datetime.now(timezone.utc):%Y-%m-%d} from `{_rel(csv_path)}`. "
-        f"Cells checked: **{n}** of {len(df)}; correct: **{k}**; accuracy "
+        f"Scored {datetime.now(timezone.utc):%Y-%m-%d} from "
+        + (f"`{_rel(csv_path)}`. " if csv_path else ", ".join(f"`{_rel(p)}`" for p in paths) + ". ")
+        + f"Cells checked: **{n}** of {len(df)}; correct: **{k}**; accuracy "
         + (
             f"**{100 * k / n:.1f}%** (95% Wilson interval {100 * lo:.1f}-{100 * hi:.1f}%)."
             if n
@@ -80,8 +88,8 @@ def score(csv_path: Path) -> str:
 
 
 def main() -> None:
-    csv_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT
-    text = score(csv_path.resolve())
+    paths = [Path(a).resolve() for a in sys.argv[1:]] or [DEFAULT]
+    text = score(paths if len(paths) > 1 else paths[0])
     FRAGMENT.write_text(text, encoding="utf-8")
     rep = REPORT.read_text(encoding="utf-8")
     block = f"{START}\n{text}{END}"

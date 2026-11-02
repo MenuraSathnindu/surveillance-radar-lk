@@ -571,6 +571,68 @@ def cstar_section(results) -> list[str]:
     return out
 
 
+def publication_lag_section() -> list[str]:
+    """Days from the end of the printed reporting week to the PDF's creation (and upload)."""
+    p = REPO_ROOT / "data" / "clean" / "publication_lag.parquet"
+    out = ["## 11. Publication lag", ""]
+    if not p.exists():
+        return out + ["Not measured yet (`python -m radar_lk.ingest.publication_lag`).", ""]
+    d = pd.read_parquet(p)
+
+    def stats(g, col):
+        ok = g.loc[g[col.replace("lag_", "plausible_")], col]
+        return pd.Series(
+            {
+                "issues": int(len(ok)),
+                "median days": ok.median(),
+                "p25": ok.quantile(0.25),
+                "p75": ok.quantile(0.75),
+                "median weeks": ok.median() / 7,
+            }
+        )
+
+    t = d.groupby("epi_year").apply(lambda g: stats(g, "lag_created_days"), include_groups=False)
+    t.loc["all"] = stats(d, "lag_created_days")
+    u = d.groupby("epi_year").apply(lambda g: stats(g, "lag_uploaded_days"), include_groups=False)
+    u.loc["all"] = stats(d, "lag_uploaded_days")
+    implaus = int((~d["plausible_created_days"] & d["lag_created_days"].notna()).sum())
+    missing = int(d["created"].isna().sum())
+    out += [
+        "Measured without network from the PDFs themselves: lag = PDF `CreationDate` minus the "
+        "last day "
+        "of the reporting week printed in Table 1 (`ModDate` equals `CreationDate` in these "
+        "Microsoft Publisher exports). A second clock, the upload time, is inferred from the "
+        "website "
+        "file name `en_<13 hex>_...`, which has the shape of PHP `uniqid()` (first 8 hex digits = "
+        "Unix "
+        "seconds); that is an inference from the naming scheme, not documented by the site. Lags "
+        f"outside 0-365 days would be treated as implausible: {implaus} found; metadata missing in "
+        f"{missing} files.",
+        "",
+        "**Creation date (used):**",
+        "",
+        md(t, index=True),
+        "",
+        "**Upload date (corroboration; files named `en_<uniqid>_` only):**",
+        "",
+        md(u, index=True),
+        "",
+        "The 2022 upload lag is long because 2022 issues were re-uploaded in a batch in 2023 "
+        "(their file "
+        "names carry 2023 stamps); their creation dates are the better measure. "
+        f"`publication_lag_weeks` in `config/sources.yaml` is the overall median creation lag in "
+        f"weeks "
+        f"({t.loc['all', 'median weeks']:.1f}, rounded). Practical meaning: a rise in week t is "
+        f"visible "
+        "in the WER about two months later, so the radar is a retrospective early-warning check "
+        "for "
+        "the Regional Epidemiologist, not a real-time alarm, unless the same table is available to "
+        "them earlier through EPINET.",
+        "",
+    ]
+    return out
+
+
 def cross_check_section() -> list[str]:
     """Second extractor result and hand-check score, embedded from their own outputs."""
     out = ["## 10. Independent checks", ""]
@@ -589,7 +651,18 @@ def cross_check_section() -> list[str]:
     hc = REPO_ROOT / "docs" / "handcheck_result.md"
     out += ["<!-- handcheck:start -->"]
     if hc.exists():
-        out += [hc.read_text(encoding="utf-8").rstrip()]
+        frag = hc.read_text(encoding="utf-8").rstrip()
+        out += [frag]
+        v3 = REPO_ROOT / "data" / "handcheck" / "v3"
+        if v3.exists() and "v3" not in frag:
+            out += [
+                "",
+                "Pack v3 (10 more cells from issues not used in v2, `data/handcheck/v3/`) is "
+                "generated "
+                "but not yet checked; together they make the 50 cells promised in the proposal. "
+                "Score both with `python scripts/handcheck_score.py "
+                "data/handcheck/v2/handcheck_verified.csv data/handcheck/v3/handcheck.csv`.",
+            ]
     else:
         out += [
             "## Hand-check (manual verification against the rendered page)",
@@ -724,6 +797,7 @@ def write_report(
         + cstar_section(results)
     )
     body += cross_check_section()
+    body += publication_lag_section()
     body += [
         "## 12. Reproduce",
         "",
@@ -731,7 +805,8 @@ def write_report(
         "python -m radar_lk.ingest.download --source wer --years 2022-2026",
         "python -m radar_lk.ingest.parse_wer",
         "python scripts/cross_extract.py        # second extractor (PyMuPDF), cell-by-cell",
-        "python scripts/handcheck.py            # hand-check pack v2 (refuses to overwrite)",
+        "python scripts/handcheck.py --version v3 --n 10 --exclude v2   # new pack, never "
+        "overwrites",
         "python scripts/handcheck_score.py      # after filling the CSV",
         "pytest -q",
         "```",

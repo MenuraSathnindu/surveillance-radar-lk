@@ -22,3 +22,4 @@ data/review_queue/*.parquet
 # Large third-party boundary files (re-download with scripts/district_centroids.py notes)
 data/raw/boundaries/*.zip
 data/cache/
+data/handcheck/_v1_invalid/

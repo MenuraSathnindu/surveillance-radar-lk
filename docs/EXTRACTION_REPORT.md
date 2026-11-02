@@ -1,6 +1,6 @@
 # WER Table 1 extraction report
 
-Generated 2026-11-02 10:30 UTC by `python -m radar_lk.ingest.parse_wer`.
+Generated 2026-11-02 11:50 UTC by `python -m radar_lk.ingest.parse_wer`.
 Primary data: Epidemiology Unit, Ministry of Health, Sri Lanka (Weekly Epidemiological Report, Table 1). Source files: `data/raw/wer/*.pdf`, listed with hashes in `data/raw/manifest.csv`. Every row in `data/clean/wer.parquet` carries `source_file`, `source_issue` and `extracted_at`.
 
 ## 1. Summary
@@ -389,8 +389,38 @@ Footnote text under Table 1 in the parsed issues (digits and dates masked), most
 <!-- handcheck:start -->
 ## Hand-check (manual verification against the rendered page)
 
-Pack ready, not yet scored: 40 cells in `data/handcheck/v2/` (one image per cell, fixed seed, 8 per year 2022-2026, no two from one issue). Fill `verified` and run `python scripts/handcheck_score.py`.
+Scored 2026-11-02 from `data/handcheck/v2/handcheck_verified.csv`. Cells checked: **40** of 40; correct: **40**; accuracy **100.0%** (95% Wilson interval 91.2-100.0%).
+
+Pack v3 (10 more cells from issues not used in v2, `data/handcheck/v3/`) is generated but not yet checked; together they make the 50 cells promised in the proposal. Score both with `python scripts/handcheck_score.py data/handcheck/v2/handcheck_verified.csv data/handcheck/v3/handcheck.csv`.
 <!-- handcheck:end -->
+
+## 11. Publication lag
+
+Measured without network from the PDFs themselves: lag = PDF `CreationDate` minus the last day of the reporting week printed in Table 1 (`ModDate` equals `CreationDate` in these Microsoft Publisher exports). A second clock, the upload time, is inferred from the website file name `en_<13 hex>_...`, which has the shape of PHP `uniqid()` (first 8 hex digits = Unix seconds); that is an inference from the naming scheme, not documented by the site. Lags outside 0-365 days would be treated as implausible: 0 found; metadata missing in 0 files.
+
+**Creation date (used):**
+
+| epi_year | issues | median days | p25 | p75 | median weeks |
+|---|---|---|---|---|---|
+| 2022 | 51.0 | 63.0 | 32.5 | 120.5 | 9.0 |
+| 2023 | 52.0 | 24.5 | 18.0 | 50.2 | 3.5 |
+| 2024 | 51.0 | 39.0 | 26.5 | 52.0 | 5.6 |
+| 2025 | 52.0 | 70.5 | 60.8 | 81.0 | 10.1 |
+| 2026 | 33.0 | 55.0 | 36.0 | 78.0 | 7.9 |
+| all | 239.0 | 53.0 | 30.0 | 75.5 | 7.6 |
+
+**Upload date (corroboration; files named `en_<uniqid>_` only):**
+
+| epi_year | issues | median days | p25 | p75 | median weeks |
+|---|---|---|---|---|---|
+| 2022 | 9.0 | 158.0 | 144.0 | 172.0 | 22.6 |
+| 2023 | 52.0 | 31.0 | 23.2 | 60.2 | 4.4 |
+| 2024 | 51.0 | 39.0 | 27.5 | 53.5 | 5.6 |
+| 2025 | 52.0 | 70.5 | 61.0 | 81.2 | 10.1 |
+| 2026 | 33.0 | 57.0 | 40.0 | 78.0 | 8.1 |
+| all | 197.0 | 54.0 | 32.0 | 75.0 | 7.7 |
+
+The 2022 upload lag is long because 2022 issues were re-uploaded in a batch in 2023 (their file names carry 2023 stamps); their creation dates are the better measure. `publication_lag_weeks` in `config/sources.yaml` is the overall median creation lag in weeks (7.6, rounded). Practical meaning: a rise in week t is visible in the WER about two months later, so the radar is a retrospective early-warning check for the Regional Epidemiologist, not a real-time alarm, unless the same table is available to them earlier through EPINET.
 
 ## 12. Reproduce
 
@@ -398,7 +428,7 @@ Pack ready, not yet scored: 40 cells in `data/handcheck/v2/` (one image per cell
 python -m radar_lk.ingest.download --source wer --years 2022-2026
 python -m radar_lk.ingest.parse_wer
 python scripts/cross_extract.py        # second extractor (PyMuPDF), cell-by-cell
-python scripts/handcheck.py            # hand-check pack v2 (refuses to overwrite)
+python scripts/handcheck.py --version v3 --n 10 --exclude v2   # new pack, never overwrites
 python scripts/handcheck_score.py      # after filling the CSV
 pytest -q
 ```

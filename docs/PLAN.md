@@ -48,7 +48,12 @@ If the site goes down again: drop PDFs into `data/raw/wer/` and run
   (`data/handcheck/v2/`, to fill)
 - [x] Mon 2 Nov (late) — radar: status quo, EARS C2/C3, NB-GLM with gating; signals, track record,
   backtest (`docs/RADAR_BACKTEST.md`)
-- [ ] Tue 3 — fill and score the hand-check (`scripts/handcheck_score.py`); leptospirosis outlook
-  (district level, WER + weather lags) + rolling-origin backtest
-- [ ] Wed 4 — dashboard (This week, Map, Outlook, Track record) + weekly brief template
+- [x] Tue 3 — hand-check v2 scored (40/40); v3 pack (10 more cells) generated; publication lag
+  measured (median 8 weeks); evaluation against proposal section 9: null false-alert rate, matched
+  comparison, known-event replay (2024 leptospirosis, 2026 dengue, Cyclone Ditwah), gating
+  evaluation, persistence and burden fields, 2026 reported separately, deviations documented
+- [ ] Tue 3/Wed 4 — fill v3 and score v2+v3 together (50 cells); leptospirosis outlook (district
+  level, WER + weather lags) + rolling-origin backtest
+- [ ] Wed 4 — dashboard (This week, Map, Outlook, Track record) + weekly brief template; show
+  `burden_label`, `weeks_persisted`, suppression reasons, track record
 - [ ] Thu 5 — report, two-page summary, video, submit by 23:59

@@ -45,9 +45,11 @@ RES = 150  # dpi
 SC = RES / 72.0
 
 
-def sample(df: pd.DataFrame, rng: random.Random) -> pd.DataFrame:
-    per_year = {y: N // len(YEARS) + (1 if i < N % len(YEARS) else 0) for i, y in enumerate(YEARS)}
-    used_issues: set[str] = set()
+def sample(
+    df: pd.DataFrame, rng: random.Random, n: int = N, exclude: set[str] | None = None
+) -> pd.DataFrame:
+    per_year = {y: n // len(YEARS) + (1 if i < n % len(YEARS) else 0) for i, y in enumerate(YEARS)}
+    used_issues: set[str] = set(exclude or ())
     picks = []
     for y in YEARS:
         d = df[df["epi_year"] == y]
@@ -134,32 +136,50 @@ def render(page, boxes, caption: str) -> Image.Image:
     hs = up.crop((0, int(boxes["head_strip"][0] * SC), x_right, int(boxes["head_strip"][1] * SC)))
     rs = up.crop((0, int(boxes["row_strip"][0] * SC), x_right, int(boxes["row_strip"][1] * SC)))
     cap_h, gap = 34, 8
-    out = Image.new("RGB", (x_right, cap_h + hs.height + gap + rs.height), "white")
-    draw = ImageDraw.Draw(out)
     try:
         font = ImageFont.truetype("arial.ttf", 18)
     except OSError:
         font = ImageFont.load_default()
+    width = max(x_right, int(font.getlength(caption)) + 16)  # the caption must never be cut off
+    out = Image.new("RGB", (width, cap_h + hs.height + gap + rs.height), "white")
+    draw = ImageDraw.Draw(out)
     draw.text((8, 7), caption, fill="black", font=font)
     out.paste(hs, (0, cap_h))
-    draw.line((0, cap_h + hs.height + gap // 2, x_right, cap_h + hs.height + gap // 2), fill="grey")
+    draw.line((0, cap_h + hs.height + gap // 2, width, cap_h + hs.height + gap // 2), fill="grey")
     out.paste(rs, (0, cap_h + hs.height + gap))
     return out
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.parse_args()
-    if OUT.exists():
-        raise SystemExit(f"{OUT} already exists; the pack is never overwritten. Use a new folder.")
+    ap.add_argument("--version", default="v2", help="pack folder under data/handcheck/")
+    ap.add_argument("--n", type=int, default=N)
+    ap.add_argument("--seed", type=int, default=SEED)
+    ap.add_argument(
+        "--exclude",
+        nargs="*",
+        default=[],
+        help="earlier packs (folders) whose issues are not reused",
+    )
+    a = ap.parse_args()
+    out_dir = OUT.parent / a.version
+    if out_dir.exists():
+        raise SystemExit(
+            f"{out_dir} already exists; a pack is never overwritten. Use a new version."
+        )
     clean = pd.read_parquet(CLEAN_DIR / "wer.parquet")
     df = clean[(clean["area_level"] == "rdhs") & clean["validated"]]
     cfg = load_config()
-    rng = random.Random(SEED)
+    exclude: set[str] = set()
+    for prev in a.exclude:
+        used = pd.read_csv(OUT.parent / prev / "handcheck.csv")["issue"]
+        files = clean.loc[clean["source_issue"].isin(set(used)), "source_file"]
+        exclude |= set(files)
+    rng = random.Random(a.seed)
     # draw until every sampled cell can be located one-to-one (rows with a blank cell are skipped)
     cells = None
     for _ in range(20):
-        cand = sample(df, rng)
+        cand = sample(df, rng, a.n, exclude)
         ok = True
         located = {}
         for _, c in cand.iterrows():
@@ -174,8 +194,8 @@ def main() -> None:
             cells = cand
             break
     if cells is None:
-        raise SystemExit("could not draw 40 locatable cells")
-    OUT.mkdir(parents=True)
+        raise SystemExit(f"could not draw {a.n} locatable cells")
+    out_dir.mkdir(parents=True)
     rows = []
     for _, c in cells.iterrows():
         kind = "A (weekly)" if c["column"] == "A" else "B (cumulative)"
@@ -185,7 +205,7 @@ def main() -> None:
         )
         with pdfplumber.open(RAW_DIR / c["source_file"]) as pdf:
             page = pdf.pages[find_table_page(pdf)[0]]
-            render(page, located[c["no"]], caption).save(OUT / f"{c['no']:02d}.png")
+            render(page, located[c["no"]], caption).save(out_dir / f"{c['no']:02d}.png")
         rows.append(
             {
                 "no": c["no"],
@@ -200,8 +220,8 @@ def main() -> None:
                 "notes": "",
             }
         )
-    pd.DataFrame(rows).to_csv(OUT / "handcheck.csv", index=False)
-    print(f"wrote {len(rows)} cells to {OUT}")
+    pd.DataFrame(rows).to_csv(out_dir / "handcheck.csv", index=False)
+    print(f"wrote {len(rows)} cells to {out_dir}")
     print(cells.groupby("epi_year").size().to_string())
     print(
         "distinct issues:",

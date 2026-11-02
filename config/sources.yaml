@@ -157,6 +157,9 @@ wer_calendar:
         2026, previous 20-26 Jul (W30), next 3-9 Aug (W32), printed "(31st Week)", cum chains
         100%/100%, monotone 100%.
 
+# WER publication lag (src/radar_lk/ingest/publication_lag.py)
+publication_lag_weeks: 8   # median days from end of reporting week to PDF CreationDate = 53 over 239 issues
+
 thresholds:
   completeness_min_pct: null    # not used: C** is undefined, gating is relative (completeness_low)
   radar_alert_quantile: 0.98    # NB-GLM upper bound; tightened by the backtest if the stop rule fires

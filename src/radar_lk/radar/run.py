@@ -73,6 +73,7 @@ def signals(panel: pd.DataFrame, fits: dict, cfg: dict, quantile: float) -> pd.D
                     "completeness_pct",
                     "completeness_p10",
                     "revised",
+                    "revision_delta",
                     "source_file",
                     "source_issue",
                 ]
@@ -99,6 +100,57 @@ def signals(panel: pd.DataFrame, fits: dict, cfg: dict, quantile: float) -> pd.D
     return s
 
 
+def add_persistence(s: pd.DataFrame) -> pd.DataFrame:
+    """weeks_persisted: consecutive weeks up to and including t whose count was above the method's
+    upper bound (or, for EARS C3, which has no bound in count units, that alerted); a missing week
+    breaks the run. Past and current weeks only, so it is available in real time.
+    sustained = weeks_persisted >= 2."""
+    s = s.sort_values(["area", "disease", "method", "t"]).copy()
+    above = np.where(s["upper"].notna(), s["observed"] > s["upper"], s["alert"]).astype(bool)
+    run = np.zeros(len(s), int)
+    key = (s["area"] + "|" + s["disease"] + "|" + s["method"]).to_numpy()
+    t = s["t"].to_numpy()
+    for i in range(len(s)):
+        if above[i]:
+            cont = i > 0 and key[i] == key[i - 1] and t[i] == t[i - 1] + 1 and run[i - 1] > 0
+            run[i] = run[i - 1] + 1 if cont else 1
+    s["weeks_persisted"] = run
+    s["sustained"] = run >= 2
+    return s
+
+
+def burden_percentiles(panel: pd.DataFrame, min_past: int = 26) -> pd.DataFrame:
+    """burden_pctl: where this week's count ranks among the same district's (and disease's) PAST
+    weekly counts since 2022 (mid-rank percentile, 0-100), needs `min_past` past weeks. It
+    describes absolute burden for that district, independent of season and of any method."""
+    out = []
+    for (a, d), g in panel.groupby(["area", "disease"], sort=False):
+        y = g["observed"].to_numpy(float)
+        pct = np.full(len(y), np.nan)
+        past: list[float] = []
+        for i, v in enumerate(y):
+            if not np.isnan(v):
+                if len(past) >= min_past:
+                    arr = np.asarray(past)
+                    pct[i] = 100 * ((arr < v).mean() + 0.5 * (arr == v).mean())
+                past.append(v)
+        out.append(
+            pd.DataFrame({"area": a, "disease": d, "t": g["t"].to_numpy(), "burden_pctl": pct})
+        )
+    return pd.concat(out, ignore_index=True)
+
+
+def burden_label(s: pd.DataFrame) -> pd.Series:
+    """Dashboard wording that separates 'unusual' from 'high but expected'."""
+    lab = np.where(
+        s["alert_shown"],
+        "unusual for this district and season",
+        np.where(s["burden_pctl"] >= 90, "high burden, within expected range", ""),
+    )
+    lab = np.where(s["suppressed"], "possible rise, held back: low reporting completeness", lab)
+    return pd.Series(lab, index=s.index)
+
+
 def alert_rate(s: pd.DataFrame, method: str = "nb_glm") -> float:
     m = s[s["method"] == method]
     return float(m["alert_shown"].mean()) if len(m) else 0.0
@@ -118,6 +170,7 @@ def track_record(s: pd.DataFrame) -> pd.DataFrame:
     tr = a.groupby(["area", "disease", "method"]).agg(
         alerts=("t", "size"),
         followed_by_second_high_week=("next_high", "mean"),
+        sustained_share=("sustained", "mean"),
         first_alert=("week_start", "min"),
         last_alert=("week_start", "max"),
     )
@@ -128,17 +181,29 @@ def track_record(s: pd.DataFrame) -> pd.DataFrame:
     return tr
 
 
-def run(workers: int = 4) -> pd.DataFrame:
+def run(workers: int = 4, reuse_fits: bool = False) -> pd.DataFrame:
     cfg = radar_cfg()
     panel, skipped = load_panel(cfg["first_year"], cfg["min_history_weeks"])
     print(
         f"series: {panel.groupby(['area', 'disease']).ngroups}; skipped: {len(skipped)} "
         f"({skipped['disease'].value_counts().to_dict()})"
     )
-    fits = fit_all(panel, cfg, workers)
-    CACHE.parent.mkdir(parents=True, exist_ok=True)
-    with open(CACHE, "wb") as f:
-        pickle.dump({"fits": fits, "cfg": cfg}, f)
+    cached = None
+    if reuse_fits and CACHE.exists():
+        with open(CACHE, "rb") as f:
+            cached = pickle.load(f)
+        keys = set(panel.groupby(["area", "disease"]).groups)
+        if cached["cfg"] != cfg or set(cached["fits"]) != keys:
+            print("cached NB fits do not match the current data/config; refitting")
+            cached = None
+    if cached:
+        fits = cached["fits"]
+        print("reusing cached NB fits")
+    else:
+        fits = fit_all(panel, cfg, workers)
+        CACHE.parent.mkdir(parents=True, exist_ok=True)
+        with open(CACHE, "wb") as f:
+            pickle.dump({"fits": fits, "cfg": cfg}, f)
     # stop rule: NB-GLM must not flag more than max_alert_rate of district-weeks
     q = cfg["quantile"]
     steps = [x for x in QUANTILE_STEPS if x >= q]
@@ -149,6 +214,9 @@ def run(workers: int = 4) -> pd.DataFrame:
         if rate <= cfg["max_alert_rate"]:
             break
     s["quantile_used"] = q
+    s = add_persistence(s)
+    s = s.merge(burden_percentiles(panel), on=["area", "disease", "t"], how="left")
+    s["burden_label"] = burden_label(s)
     as_of = panel.dropna(subset=["week_end"])["week_end"].max()
     s["as_of"] = as_of
     s["computed_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -168,8 +236,14 @@ def run(workers: int = 4) -> pd.DataFrame:
         "suppressed",
         "suppress_reason",
         "alert_shown",
+        "weeks_persisted",
+        "sustained",
+        "burden_pctl",
+        "burden_label",
         "revised",
+        "revision_delta",
         "completeness_pct",
+        "completeness_p10",
         "completeness_low",
         "source_file",
         "source_issue",
@@ -195,4 +269,8 @@ def recompute_nb(y, fits, cfg, quantile, weeks=None):
 
 
 if __name__ == "__main__":
-    run()
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+    ap.add_argument("--reuse-fits", action="store_true", help="reuse data/cache NB fits if current")
+    run(reuse_fits=ap.parse_args().reuse_fits)
