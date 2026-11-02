@@ -1,15 +1,16 @@
 # WER Table 1 extraction report
 
-Generated 2026-11-02 05:44 UTC by `python -m radar_lk.ingest.parse_wer`.
+Generated 2026-11-02 10:30 UTC by `python -m radar_lk.ingest.parse_wer`.
 Primary data: Epidemiology Unit, Ministry of Health, Sri Lanka (Weekly Epidemiological Report, Table 1). Source files: `data/raw/wer/*.pdf`, listed with hashes in `data/raw/manifest.csv`. Every row in `data/clean/wer.parquet` carries `source_file`, `source_issue` and `extracted_at`.
 
 ## 1. Summary
 
-- PDFs: **244**: parsed **235**, no Table 1 **2**, failed **7**
-- District-disease-weeks validated: **90.57%** (70,033 of 77,324); target 95% **not met**
-- `source_total_error` cases (printed national total wrong, districts kept): **33**
+- PDFs: **244**: parsed **241**, no Table 1 **2**, failed **1**; week overrides applied: **6**
+- District-disease-weeks `extraction_valid` (tier 1): **97.06%** (76,440 of 78,754); target 95% met
+- Of those, `revised` (tier 2: cross-week identity fails, kept with `revision_delta`): **5.3%** of 75,634 checkable rows
+- National source errors (districts kept, national row queued): weekly **155**, cumulative **80**
 - Duplicate weeks resolved: **0**
-- Rows in review queue: **8,000** (district 7,291)
+- Rows in review queue: **2,638** (district 2,314)
 
 ## 2. Issues processed, per year
 
@@ -18,236 +19,241 @@ Primary data: Epidemiology Unit, Ministry of Health, Sri Lanka (Weekly Epidemiol
 | 2011 | 1 | 0 | 1 | 0 |
 | 2021 | 2 | 2 | 0 | 0 |
 | 2022 | 51 | 51 | 0 | 0 |
-| 2023 | 52 | 50 | 0 | 2 |
-| 2024 | 52 | 50 | 0 | 2 |
+| 2023 | 52 | 52 | 0 | 0 |
+| 2024 | 52 | 51 | 0 | 1 |
 | 2025 | 52 | 52 | 0 | 0 |
-| 2026 | 33 | 30 | 0 | 3 |
+| 2026 | 33 | 33 | 0 | 0 |
 | unknown | 1 | 0 | 1 | 0 |
-| **total** | 244 | 235 | 2 | 7 |
+| **total** | 244 | 241 | 2 | 1 |
 
 `year` is the year of the week printed in Table 1 for parsed issues, and the volume year (vol + 1973) for issues that did not parse. 2021 and 2011 are out-of-range files that the site lists under 2022 dates.
+
+**Dropped as before 2022-W01** (parsed, but outside the post-COVID baseline): Vol 48 No 37 (2021-W35), Vol 49 No 1 (2021-W52).
 
 **no_table** (no Table 1 title found on any page; logged and skipped):
 
 - `wer/en_63ec87e11b430_WER.pdf`
 - `wer/Vol_38_NO_29_English.pdf`
 
-**failed** (7; nothing from these issues reaches the clean table):
+**failed** (1; nothing from these issues reaches the clean table):
 
 | issue | file | reason |
 |---|---|---|
-| Vol 50 No 2 | en_64100cf21b53d_Vol_50_no_02-english_1.pdf | week_weekday: Fri 2021-12-31 to 2022-01-06 starts on Friday, WER weeks then started on Saturday |
-| Vol 50 No 41 | en_658bfc0e47143_Vol_50_no_41-english.pdf | week_text_inconsistent: '30th– 06th Sep 2023 ': start day 30 != 2023-08-31 |
-| Vol 51 No 24 | en_6684d253a04fc_Vol_51_no_24-english.pdf | week_weekday: Wed 2024-05-01 to 2024-05-07 starts on Wednesday, WER weeks then started on Saturday |
 | Vol 51 No 36 | en_66ff7279f1888_Vol_51_no_36-english.pdf | week_number_mismatch: printed week 35 != canonical 2024-W34 (+0) for 2024-08-17..2024-08-23 |
-| Vol 53 No 2 | en_69db13e10917e_Vol_53_no_02-english.pdf | week_weekday: Sun 2024-12-29 to 2025-01-04 starts on Sunday, WER weeks then started on Saturday |
-| Vol 53 No 3 | en_69db15872f0bb_Vol_53_no_03-english.pdf | week_weekday: Sun 2025-01-05 to 2025-01-11 starts on Sunday, WER weeks then started on Saturday |
-| Vol 53 No 32 | en_6abdf20d4de58_Vol_53_no_32-english.pdf | week_text_inconsistent: '26th – 02nd Aug 2026 ': start day 26 != 2026-07-27 |
 
-### Source typos in the printed week (not corrected)
+### Week overrides applied (source typos in the printed week)
 
-These issues print a week that is impossible or contradicts the issue's own numbering. They are not guessed; to accept a correction add it to `wer_calendar.week_overrides` in `config/sources.yaml`. The front-page line (separate from the table) is shown as corroboration only: in every parsed issue the table week is the 7 days before the front-page range.
+Each entry exists only where the printed day numbers/weekday, the printed `(Nth Week)`, the front-page range (table week = front page - 7 days), the previous and next issues' weeks and the cumulative values agree on one answer. `parse_wer` still checks weekday and week number against the override. The evidence for each is in `config/sources.yaml`.
 
-| issue | printed in Table 1 | front page |
-|---|---|---|
-| Vol 50 No 2 |  Fri 2021-12-31 to 2022-01-06 starts on Friday, WER weeks then started on Saturday | Vol. 50 No. 02 07th– 13th Jan 2023 Ocean Pollution |
-| Vol 50 No 41 |  '30th– 06th Sep 2023 ': start day 30 != 2023-08-31 | Vol. 50 No. 41 07th– 13th Oct 2023 Ethical considerations in |
-| Vol 51 No 24 |  Wed 2024-05-01 to 2024-05-07 starts on Wednesday, WER weeks then started on Saturday | Vol. 51 No. 24 08th – 14th June 2024 Human Rabies – Part III |
-| Vol 51 No 36 |  printed week 35 != canonical 2024-W34 (+0) for 2024-08-17..2024-08-23 | Vol. 51 No. 36 31st – 06th Sep 2024 Brucellosis - Part II Ph |
-| Vol 53 No 2 |  Sun 2024-12-29 to 2025-01-04 starts on Sunday, WER weeks then started on Saturday | Vol. 53 No. 02 05th – 11th Jan 2026 Flashback 2025: Digital |
-| Vol 53 No 3 |  Sun 2025-01-05 to 2025-01-11 starts on Sunday, WER weeks then started on Saturday | Vol. 53 No. 03 12th – 18th Jan 2026 Nipah Virus in South Asi |
-| Vol 53 No 32 |  '26th – 02nd Aug 2026 ': start day 26 != 2026-07-27 | Vol. 53 No. 32 03rd – 09th Aug 2026 The EPI Coverage Assessm |
-
-## 3. Validation
-
-District-disease-weeks extracted from parsed issues: **77,324**; validated: **70,033 = 90.57%** (target 95%: **NOT MET**).
-
-A district-disease-week is one RDHS x disease x week. Validated means it passed the sum check (districts add to the printed national total) and, where the previous week is present, the cumulative check; it is in `data/clean/wer.parquet`. Everything else is in `data/review_queue/wer.parquet` with `fail_reason`. Issues that failed to parse contribute no rows to either count (see section 2).
-
-### Validated, per year
-
-| year | validated | not validated | total | % validated |
+| issue | file | week used | status | reason |
 |---|---|---|---|---|
-| 2021 | 546 | 78 | 624 | 87.5 |
-| 2022 | 13503 | 2409 | 15912 | 84.9 |
-| 2023 | 12468 | 3132 | 15600 | 79.9 |
-| 2024 | 15888 | 778 | 16666 | 95.3 |
-| 2025 | 16814 | 788 | 17602 | 95.5 |
-| 2026 | 10814 | 106 | 10920 | 99.0 |
+| Vol 50 No 2 | en_64100cf21b53d_Vol_50_no_02-english_1.pdf | 2022-12-31 to 2023-01-06 | ok | printed "31st- 06th Jan 2022" but the year is 2023: front page 7-13 Jan 2023, previous issue 24-30 Dec 2022 (W52), next 7-13 Jan 2023 (W02), printed "(1st Week)", Sat start, cum == weekly in 100% of district cells (year-start week) and cum chains to next week in 100%. |
+| Vol 50 No 41 | en_658bfc0e47143_Vol_50_no_41-english.pdf | 2023-09-30 to 2023-10-06 | ok | printed "30th- 06th Sep 2023" but 30 Sep-6 Oct: front page 7-13 Oct 2023, previous 23-29 Sep (W39), next 7-13 Oct (W41), printed "(40th Week)", Sat start, cum chains 98%/97%, monotone 99.7%. |
+| Vol 51 No 24 | en_6684d253a04fc_Vol_51_no_24-english.pdf | 2024-06-01 to 2024-06-07 | ok | printed "01st - 07th May 2024" (a Wednesday start) but 1-7 June: front page 8-14 June 2024, previous 25-31 May (W22), next 8-14 June (W24), printed "(23rd Week)", cum chains 99%/97%, monotone 100%. |
+| Vol 53 No 2 | en_69db13e10917e_Vol_53_no_02-english.pdf | 2025-12-29 to 2026-01-04 | ok | printed "29th - 04th Jan 2025" but the year is 2026: front page 5-11 Jan 2026, previous issue 20-26 Dec 2025 (Sat-Fri), first Monday-Sunday week after the announced switch, printed "(01st Week)", cum == weekly in 93% of cells (same as other year-start weeks), chains to next 93%. |
+| Vol 53 No 3 | en_69db15872f0bb_Vol_53_no_03-english.pdf | 2026-01-05 to 2026-01-11 | ok | printed "05th - 11th Jan 2025" but the year is 2026: front page 12-18 Jan 2026, previous 29 Dec-4 Jan, next 12-18 Jan 2026 (W03), Monday start, printed "(02nd Week)", cum chains 93%/100%, monotone 97%. |
+| Vol 53 No 32 | en_6abdf20d4de58_Vol_53_no_32-english.pdf | 2026-07-27 to 2026-08-02 | ok | printed "26th - 02nd Aug 2026" but the Monday-Sunday week is 27 Jul-2 Aug: front page 3-9 Aug 2026, previous 20-26 Jul (W30), next 3-9 Aug (W32), printed "(31st Week)", cum chains 100%/100%, monotone 100%. |
 
-### Validated, per disease
+**Not settled (no override, still failed):** Vol 51 No 36 (`en_66ff7279f1888_Vol_51_no_36-english.pdf`). Vol 51 No 36 prints the dates of Vol 51 No 35 (17-23 Aug 2024) with its own week number (35). The number, the neighbours and the front page say 24-30 Aug, but its cumulatives chain to the previous week in only 73% of district cells (normal median 98%) and are monotone in 90%, so the evidence does not all agree and the week stays out.
 
-| disease | validated | not validated | total | % validated |
-|---|---|---|---|---|
-| chickenpox | 5281 | 829 | 6110 | 86.4 |
-| dengue | 3924 | 2186 | 6110 | 64.2 |
-| dysentery | 5733 | 377 | 6110 | 93.8 |
-| encephalitis | 5844 | 266 | 6110 | 95.6 |
-| enteric_fever | 5975 | 135 | 6110 | 97.8 |
-| food_poisoning | 5809 | 301 | 6110 | 95.1 |
-| human_rabies | 6006 | 104 | 6110 | 98.3 |
-| leishmaniasis | 5662 | 448 | 6110 | 92.7 |
-| leprosy | 804 | 2 | 806 | 99.8 |
-| leptospirosis | 4602 | 1508 | 6110 | 75.3 |
-| meningitis | 5655 | 455 | 6110 | 92.6 |
-| tuberculosis | 3102 | 96 | 3198 | 97.0 |
-| typhus | 5787 | 323 | 6110 | 94.7 |
-| viral_hepatitis | 5849 | 261 | 6110 | 95.7 |
+## 3. Validation (two tiers)
 
-### How the validated rows were validated
+**Tier 1, `extraction_valid` (= column `validated`).** The row passes the checks that need only its own issue: for its (week, disease) the 26 districts' cumulative counts add to the printed national cumulative; no count cell is blank or unreadable; completeness and timeliness are percentages (a value outside 0..100 is set to NaN and counted, the counts stay). Only `extraction_valid` rows are in `data/clean/wer.parquet` and may reach the dashboard. If the cumulatives add up but the districts' weekly counts do not add to the printed national weekly, the national weekly is a source error (`note=national_weekly_source_error`); if the weekly counts add up but the cumulatives do not, the national cumulative is (`note=national_cumulative_source_error`). In both cases the district rows are kept and only the national row is queued; if neither adds up the whole group is queued. Each label must also sit on the same text line as its numbers (checked in the parser). Only weeks from 2022-W01 are kept: a deliberate post-COVID baseline.
 
-| check | district rows |
+**Tier 2, `revised`.** The cross-week identity `cum_t = cum_(t-1) + weekly_t` (in a year's first week `cum = weekly`). A failure does **not** remove the row: it sets `revised=True` and `revision_delta = cum_t - (cum_(t-1) + weekly_t)`; `revised` is empty where the previous week is missing. **Weekly counts are kept exactly as printed in that issue** (first-printed). A later issue may raise the cumulative of an earlier week without re-printing the weekly figure, so the radar's weekly series is what a Regional Epidemiologist saw in real time, and `revision_delta` says how much was added afterwards.
+
+District-disease-weeks extracted from parsed issues: **78,754**; extraction_valid: **76,440 = 97.06%**.
+
+### Per year
+
+| year | extraction_valid | review | total | % extraction_valid | tier 2 checkable | revised | % revised |
+|---|---|---|---|---|---|---|---|
+| 2022 | 15496 | 416 | 15912 | 97.4 | 15106 | 1202 | 8.0 |
+| 2023 | 15574 | 650 | 16224 | 96.0 | 15548 | 1460 | 9.4 |
+| 2024 | 16926 | 78 | 17004 | 99.5 | 16588 | 700 | 4.2 |
+| 2025 | 17264 | 338 | 17602 | 98.1 | 17238 | 516 | 3.0 |
+| 2026 | 11180 | 832 | 12012 | 93.1 | 11154 | 100 | 0.9 |
+
+### Per disease
+
+| disease | extraction_valid | review | total | % extraction_valid | % revised | median revision_delta | median abs delta |
+|---|---|---|---|---|---|---|---|
+| chickenpox | 5980 | 234 | 6214 | 96.2 | 8.3 | 2.0 | 3.0 |
+| dengue | 6006 | 208 | 6214 | 96.7 | 15.0 | 13.0 | 21.0 |
+| dysentery | 6032 | 182 | 6214 | 97.1 | 4.5 | 1.0 | 2.0 |
+| encephalitis | 6006 | 208 | 6214 | 96.7 | 2.4 | 1.0 | 2.0 |
+| enteric_fever | 6084 | 130 | 6214 | 97.9 | 1.6 | 1.0 | 1.5 |
+| food_poisoning | 6032 | 182 | 6214 | 97.1 | 3.0 | 1.0 | 3.0 |
+| human_rabies | 6084 | 130 | 6214 | 97.9 | 1.1 | 1.0 | 1.0 |
+| leishmaniasis | 6032 | 182 | 6214 | 97.1 | 5.7 | 2.0 | 5.0 |
+| leprosy | 832 | 52 | 884 | 94.1 | 0.0 |  |  |
+| leptospirosis | 6006 | 208 | 6214 | 96.7 | 10.3 | 3.0 | 4.0 |
+| meningitis | 6006 | 208 | 6214 | 96.7 | 5.4 | 1.0 | 2.0 |
+| tuberculosis | 3198 | 104 | 3302 | 96.9 | 3.8 | 1.0 | 8.0 |
+| typhus | 6084 | 130 | 6214 | 97.9 | 4.4 | 1.0 | 2.0 |
+| viral_hepatitis | 6058 | 156 | 6214 | 97.5 | 3.1 | 1.0 | 3.0 |
+
+`revision_delta` over all 3,978 revised district rows: median 2, median absolute 4, 90th percentile absolute 112; positive in 79% (the cumulative was raised after the weekly figure was printed).
+
+| group | district rows |
 |---|---|
-| sum ok and cumulative ok | 66471 |
-| sum ok, cumulative unknown (previous week missing / first week) | 2704 |
-| kept via source_total_error rule (note=national_total_source_error) | 858 |
+| extraction_valid, tier 2 checked, not revised | 71656 |
+| extraction_valid, revised (kept, delta recorded) | 3978 |
+| extraction_valid, tier 2 unknown (previous week missing) | 806 |
+| of all these: note = national_weekly_source_error | 4030 |
+| of all these: note = national_cumulative_source_error | 2080 |
 
-## 4. Why rows failed (top reasons first)
+## 4. What is in the review queue
 
-| fail_reason | national | rdhs | total | share of all review rows |
-|---|---|---|---|---|
-| cumulative_mismatch; | 520 | 3078 | 3598 | 45.0 |
-| sum_mismatch; | 27 | 2753 | 2780 | 34.8 |
-| sum_mismatch;cumulative_mismatch; | 124 | 1173 | 1297 | 16.2 |
-| pct_out_of_range; | 0 | 157 | 157 | 2.0 |
-| group_has_missing_cell; | 3 | 127 | 130 | 1.6 |
-| source_total_error;sum_mismatch;cumulative_mismatch; | 33 | 0 | 33 | 0.4 |
-| missing_cell; | 2 | 3 | 5 | 0.1 |
-
-`cumulative_mismatch`: cum_t != cum_(t-1) + weekly_t for that row. `sum_mismatch`: the 26 districts do not add to the printed SRI LANKA row for that (week, disease), which fails every row of that group. `source_total_error`: the rule in section 5. `missing_cell` / `group_has_missing_cell`: a count cell is blank or unreadable in the PDF, so the group cannot be verified and nothing is inferred. `pct_out_of_range`: completeness or timeliness outside 0..100 in the PDF.
-
-### Cumulative-check failures: what they look like
-
-4,284 of 74,302 checkable district rows (5.8%) fail `cum_t = cum_(t-1) + weekly_t`. `gap` = cum_t - (cum_(t-1) + weekly_t):
-
-- median |gap| = 4; 75th percentile = 19; 90th = 110
-- gap > 0 in 74% of failures, gap < 0 in 26%
-
-| epi_year | checkable rows | failing | % failing |
+| fail_reason | national | rdhs | total |
 |---|---|---|---|
-| 2022 | 15598 | 1314 | 8.4 |
-| 2023 | 14974 | 1536 | 10.3 |
-| 2024 | 15964 | 728 | 4.6 |
-| 2025 | 17576 | 654 | 3.7 |
-| 2026 | 10190 | 52 | 0.5 |
+| scrambled_weekly_column | 29 | 780 | 809 |
+| stale_weekly_copy | 24 | 728 | 752 |
+| cum_sum_mismatch | 26 | 676 | 702 |
+| national_weekly_source_error | 155 | 0 | 155 |
+| group_has_missing_cell | 3 | 127 | 130 |
+| national_cumulative_source_error | 80 | 0 | 80 |
+| missing_cell | 2 | 3 | 5 |
+| stale_weekly_copy;national_cumulative_source_error | 2 | 0 | 2 |
+| stale_weekly_copy;national_weekly_source_error | 2 | 0 | 2 |
+| scrambled_weekly_column;national_cumulative_source_error | 1 | 0 | 1 |
 
-| disease | checkable rows | failing | % failing |
-|---|---|---|---|
-| dengue | 5876 | 954 | 16.2 |
-| leptospirosis | 5874 | 668 | 11.4 |
-| chickenpox | 5876 | 553 | 9.4 |
-| leishmaniasis | 5876 | 366 | 6.2 |
-| meningitis | 5876 | 349 | 5.9 |
-| dysentery | 5876 | 296 | 5.0 |
-| typhus | 5876 | 293 | 5.0 |
-| viral_hepatitis | 5874 | 202 | 3.4 |
-| food_poisoning | 5876 | 194 | 3.3 |
-| tuberculosis | 3068 | 91 | 3.0 |
-| encephalitis | 5874 | 156 | 2.7 |
-| enteric_fever | 5876 | 96 | 1.6 |
-| human_rabies | 5876 | 66 | 1.1 |
-| leprosy | 728 | 0 | 0.0 |
+`cum_sum_mismatch`: for that (week, disease) neither the districts' weekly counts nor their cumulative counts add to the printed national row, so the whole group is unreliable. `national_weekly_source_error` / `national_cumulative_source_error`: only the national row of a group whose districts are consistent (section 5). `missing_cell` / `group_has_missing_cell`: a count cell is blank or unreadable in the PDF; the group cannot be verified and nothing is inferred. Issues that failed to parse (section 2) and issues before 2022-W01 contribute no rows.
 
-Weeks where more than 30% of checkable district rows fail (an issue-level problem rather than scattered cells): 2022-W21 (36%), 2022-W22 (31%), 2022-W38 (41%), 2022-W52 (31%), 2023-W42 (37%), 2023-W46 (52%), 2023-W51 (30%), 2025-W06 (45%), 2025-W07 (41%).
+## 5. National source errors (districts kept, national row queued)
 
-Reading: failures are mostly small (median gap a handful of cases), mostly positive, highest for the highest-volume diseases (dengue, leptospirosis, chickenpox) and lower in 2024-26 than in 2022-23. That pattern is *consistent with* cumulative columns being revised for late-notified cases after the weekly figure was printed, but the PDFs do not say so, so this is a hypothesis, not a finding. It means the strict identity may reject correct rows.
+Two symmetric rules, per (week, disease):
 
-### Sum-check failures: what they look like
+- `national_weekly_source_error`: the districts' cumulative counts add to the printed national cumulative, but their weekly counts do not add to the printed national weekly.
+- `national_cumulative_source_error`: the districts' weekly counts add to the printed national weekly, but their cumulative counts do not add to the printed national cumulative.
 
-187 of 2974 (week, disease) groups (6.3%) fail the sum check. districts-sum minus printed-national: median 196, 94% positive (the printed national is *smaller* than the districts).
+In both cases the district rows are kept with that `note` and only the national row goes to review. The second rule can also fire when a single district's cumulative carries a fixed offset (see the constant gaps below); its weekly figures, which the radar uses, still add up.
 
-| epi_year | failing groups | groups | % failing |
-|---|---|---|---|
-| 2021 | 3 | 24 | 12.5 |
-| 2022 | 83 | 612 | 13.6 |
-| 2023 | 87 | 600 | 14.5 |
-| 2024 | 2 | 641 | 0.3 |
-| 2025 | 10 | 677 | 1.5 |
-| 2026 | 2 | 420 | 0.5 |
+### `national_weekly_source_error`: 155 groups
 
-| disease | failing groups |
-|---|---|
-| dengue | 85 |
-| leptospirosis | 62 |
-| chickenpox | 15 |
-| leishmaniasis | 6 |
-| meningitis | 5 |
-| food_poisoning | 4 |
-| encephalitis | 3 |
-| dysentery | 3 |
+By year: {2022: 78, 2023: 64, 2024: 1, 2025: 10, 2026: 2}; by disease: {'dengue': 80, 'leptospirosis': 57, 'chickenpox': 13, 'leishmaniasis': 3, 'food_poisoning': 1, 'meningitis': 1}.
 
-### Failing sum groups, split by what the cumulative columns say
+The printed national weekly is below the district sum in 100% (median printed/sum = 0.10).
 
-| class | groups | what it means |
-|---|---|---|
-| A | 33 | national cumulative = district cumulative sum, all 26 districts pass their own cumulative check, national fails its own (rule in section 5 fires) |
-| B | 7 | national cumulative = district cumulative sum, no district fails, but some district's previous week is missing so its cumulative check is unknown |
-| C | 118 | national cumulative = district cumulative sum, but at least one district fails its own cross-week cumulative check |
-| D | 27 | national cumulative != district cumulative sum |
-
-In classes A-C the *cumulative* columns of the districts add up to the national cumulative, so only the printed national *weekly* figure disagrees; in the rule-A cases the printed weekly is far below the district sum (e.g. 16 printed against 163 for 2022-W25 leptospirosis). Class D (and e.g. every disease of 2023-W41) points at a wrong national row or week and stays in review.
-
-### What-if (NOT applied): which rule keeps the rate below target
-
-- current rules (weekly sum check + cross-week cumulative check + pct range): 90.57%
-- only checks that live inside one issue (districts' cumulative sum = national cumulative, pct range), with the cross-week cumulative identity reported but not enforced: 96.00%
-
-The gap between the two is the cross-week identity `cum_t = cum_(t-1) + weekly_t`, which is the largest single failure class. Whether a row that fails only that identity may reach the dashboard (flagged) or must stay in review is a policy decision, not a parser fix.
-
-## 5. `source_total_error` cases
-
-Rule: for a (week, disease) that fails the sum check, if every district row passes its own cumulative check *and* the national row fails its own cumulative check, the districts are internally consistent and only the printed national figure is wrong. The district rows are kept (`validated=True`, `note=national_total_source_error`); only the national row goes to the review queue. If any district's cumulative status is unknown or failing, the rule does not fire and the whole group stays in review.
-
-Count: **33**.
+First 25 (all are in `data/review_queue/wer.parquet` under that `fail_reason`):
 
 | week | disease | printed_national_cases | district_sum_cases | printed_national_cum | district_sum_cum | file |
 |---|---|---|---|---|---|---|
+| 2022-W01 | dengue | 21 | 686 | 2132 | 2132 | vol_49_no_02-english_2.pdf |
 | 2022-W01 | leptospirosis | 22 | 221 | 221 | 221 | vol_49_no_02-english_2.pdf |
+| 2022-W02 | dengue | 14 | 803 | 3604 | 3604 | vol_49_no_03-english_2.pdf |
 | 2022-W02 | leptospirosis | 10 | 101 | 322 | 322 | vol_49_no_03-english_2.pdf |
+| 2022-W03 | dengue | 16 | 785 | 5232 | 5232 | vol_49_no_04-english_1.pdf |
 | 2022-W03 | leptospirosis | 11 | 114 | 436 | 436 | vol_49_no_04-english_1.pdf |
+| 2022-W04 | dengue | 12 | 726 | 6497 | 6497 | vol_49_no_05-english_1.pdf |
+| 2022-W05 | dengue | 86 | 742 | 7361 | 7361 | vol_49_no_06-english.pdf |
+| 2022-W06 | dengue | 51 | 403 | 7874 | 7874 | vol_49_no_07-english.pdf |
+| 2022-W07 | dengue | 71 | 508 | 8589 | 8589 | vol_49_no_08-english_2.pdf |
+| 2022-W08 | dengue | 67 | 565 | 9260 | 9260 | vol_49_no_09-english.pdf |
 | 2022-W09 | dengue | 54 | 542 | 9802 | 9802 | vol_49_no_10-english.pdf |
 | 2022-W10 | dengue | 59 | 594 | 10396 | 10396 | vol_49_no_11-english.pdf |
 | 2022-W11 | dengue | 56 | 563 | 10959 | 10959 | vol_49_no_12-english.pdf |
+| 2022-W12 | dengue | 62 | 532 | 11584 | 11584 | vol_49_no_13-english.pdf |
+| 2022-W13 | dengue | 57 | 481 | 12158 | 12158 | vol_49_no_14-english.pdf |
+| 2022-W14 | dengue | 72 | 626 | 12883 | 12883 | vol_49_no_15-english_1.pdf |
 | 2022-W15 | dengue | 36 | 367 | 13250 | 13250 | vol_49_no_16-english_1.pdf |
+| 2022-W16 | dengue | 96 | 845 | 14214 | 14214 | vol_49_no_17-english_3.pdf |
+| 2022-W17 | dengue | 98 | 630 | 15195 | 15195 | vol_49_no_18-english_2.pdf |
 | 2022-W17 | leptospirosis | 10 | 100 | 1377 | 1377 | vol_49_no_18-english_2.pdf |
+| 2022-W18 | dengue | 90 | 797 | 16124 | 16124 | vol_49_no_19-english_2.pdf |
+| 2022-W19 | dengue | 84 | 741 | 16964 | 16964 | vol_49_no_20-english_1.pdf |
+| 2022-W20 | dengue | 12 | 594 | 18205 | 18205 | vol_49_no_21-english_3.pdf |
 | 2022-W20 | leptospirosis | 16 | 162 | 1714 | 1714 | vol_49_no_21-english_3.pdf |
-| 2022-W23 | leptospirosis | 13 | 135 | 2166 | 2166 | vol_49_no_24-english_1.pdf |
-| 2022-W25 | leptospirosis | 16 | 163 | 2513 | 2513 | vol_49_no_26-english_2.pdf |
-| 2022-W28 | leptospirosis | 11 | 110 | 2792 | 2792 | vol_49_no_29-english_3.pdf |
-| 2022-W31 | leptospirosis | 10 | 102 | 3234 | 3234 | vol_49_no_32-english_1.pdf |
-| 2022-W35 | dengue | 46 | 461 | 44185 | 44185 | vol_49_no_36-english_1.pdf |
-| 2022-W45 | dengue | 56 | 567 | 54748 | 54748 | en_6459f68898aa0_vol_49_no_46-english_1.pdf |
-| 2022-W45 | leptospirosis | 16 | 165 | 5174 | 5174 | en_6459f68898aa0_vol_49_no_46-english_1.pdf |
-| 2023-W25 | leptospirosis | 17 | 175 | 4798 | 4798 | en_64b4cbff23f46_Vol_50_no_26-english_2.pdf |
-| 2023-W25 | meningitis | 3 | 30 | 638 | 638 | en_64b4cbff23f46_Vol_50_no_26-english_2.pdf |
-| 2023-W26 | leptospirosis | 14 | 147 | 4945 | 4945 | en_64c772c1952be_Vol_50_no_27-english_1.pdf |
-| 2023-W28 | leptospirosis | 15 | 153 | 5326 | 5326 | en_64c78901a4223_Vol_50_no_29-english_1.pdf |
-| 2023-W32 | chickenpox | 12 | 124 | 3315 | 3315 | en_6592f77ef271b_Vol_50_no_33-english.pdf |
-| 2023-W32 | leishmaniasis | 11 | 111 | 2270 | 2270 | en_6592f77ef271b_Vol_50_no_33-english.pdf |
-| 2023-W33 | chickenpox | 14 | 140 | 3455 | 3455 | en_6592f6eec67ef_Vol_50_no_34-english.pdf |
-| 2023-W33 | leptospirosis | 16 | 165 | 6216 | 6216 | en_6592f6eec67ef_Vol_50_no_34-english.pdf |
-| 2023-W34 | leptospirosis | 14 | 142 | 6358 | 6358 | en_6507d4a364766_Vol_50_no_35-english_1.pdf |
-| 2025-W01 | dengue | 111 | 1118 | 1118 | 1118 | en_67c96592b4988_Vol_52_no_02-english.pdf |
-| 2025-W04 | dengue | 111 | 1116 | 4486 | 4486 | en_67d929c3161cb_Vol_52_no_05-english.pdf |
-| 2025-W05 | dengue | 102 | 1025 | 5511 | 5511 | en_67de6da079b22_Vol_52_no_06-english.pdf |
-| 2025-W18 | dengue | 129 | 1290 | 18067 | 18067 | en_6872ab13dcf76_Vol_52_no_19-english.pdf |
-| 2025-W20 | dengue | 137 | 1379 | 20784 | 20784 | en_68a41de1ba48e_Vol_52_no_21-english.pdf |
-| 2025-W52 | dengue | 144 | 1443 | 50501 | 50501 | en_69afa77f13c32_Vol_53_no_01-english.pdf |
-| 2026-W23 | leishmaniasis | 11 | 115 | 1902 | 1902 | en_6a4f3700e64f1_Vol_53_no_24-english.pdf |
-| 2026-W33 | leishmaniasis | 12 | 127 | 2736 | 2736 | en_6ac4966950695_Vol_53_no_34-english.pdf |
 
-By year: {2022: 16, 2023: 9, 2025: 6, 2026: 2}.
+### `national_cumulative_source_error`: 80 groups
+
+By year: {2022: 23, 2023: 20, 2024: 24, 2025: 8, 2026: 5}; by disease: {'viral_hepatitis': 34, 'tuberculosis': 24, 'typhus': 11, 'chickenpox': 3, 'human_rabies': 3, 'enteric_fever': 2, 'leprosy': 2, 'dengue': 1}.
+
+Constant gaps: tuberculosis 2024: district cumulatives exceed the national by exactly 66 in all 21 weeks; viral_hepatitis 2025: district cumulatives exceed the national by exactly -10 in all 6 weeks. Median printed/sum of the cumulative: 0.95.
+
+First 25 (all are in `data/review_queue/wer.parquet` under that `fail_reason`):
+
+| week | disease | printed_national_cases | district_sum_cases | printed_national_cum | district_sum_cum | file |
+|---|---|---|---|---|---|---|
+| 2022-W16 | viral_hepatitis | 12 | 12 | 10 | 100 | vol_49_no_17-english_3.pdf |
+| 2022-W17 | viral_hepatitis | 8 | 8 | 10 | 108 | vol_49_no_18-english_2.pdf |
+| 2022-W18 | viral_hepatitis | 3 | 3 | 11 | 111 | vol_49_no_19-english_2.pdf |
+| 2022-W19 | viral_hepatitis | 8 | 8 | 11 | 119 | vol_49_no_20-english_1.pdf |
+| 2022-W20 | viral_hepatitis | 9 | 9 | 12 | 128 | vol_49_no_21-english_3.pdf |
+| 2022-W21 | viral_hepatitis | 5 | 5 | 14 | 140 | vol_49_no_22-english_1.pdf |
+| 2022-W23 | viral_hepatitis | 7 | 7 | 14 | 147 | vol_49_no_24-english_1.pdf |
+| 2022-W24 | viral_hepatitis | 6 | 6 | 15 | 155 | vol_49_no_25-english_2.pdf |
+| 2022-W25 | viral_hepatitis | 9 | 9 | 16 | 164 | vol_49_no_26-english_2.pdf |
+| 2022-W26 | viral_hepatitis | 1 | 1 | 16 | 165 | vol_49_no_27-english.pdf |
+| 2022-W27 | viral_hepatitis | 5 | 5 | 17 | 170 | vol_49_no_28-english_2.pdf |
+| 2022-W28 | viral_hepatitis | 10 | 10 | 18 | 180 | vol_49_no_29-english_3.pdf |
+| 2022-W29 | viral_hepatitis | 12 | 12 | 19 | 195 | vol_49_no_30-english.pdf |
+| 2022-W30 | viral_hepatitis | 6 | 6 | 20 | 203 | vol_49_no_31-english_1.pdf |
+| 2022-W31 | viral_hepatitis | 13 | 13 | 21 | 216 | vol_49_no_32-english_1.pdf |
+| 2022-W32 | viral_hepatitis | 6 | 6 | 22 | 222 | vol_49_no_33-english_2.pdf |
+| 2022-W33 | viral_hepatitis | 11 | 11 | 23 | 234 | vol_49_no_34-english_2.pdf |
+| 2022-W48 | typhus | 28 | 28 | 101 | 1013 | en_6459f77cb2316_vol_49_no_49-english_2.pdf |
+| 2022-W49 | typhus | 38 | 38 | 105 | 1056 | en_6459f7dbd4561_vol_49_no_50-english_1.pdf |
+| 2022-W50 | typhus | 38 | 38 | 109 | 1095 | en_6459f8449d423_vol_49_no_51-english_1.pdf |
+| 2022-W51 | typhus | 71 | 71 | 116 | 1169 | en_6459f889a4a8c_vol_49_no_52-english_1.pdf |
+| 2022-W52 | typhus | 74 | 74 | 124 | 1246 | en_640feff0076ea_Vol_50_no_01-english.pdf |
+| 2022-W52 | viral_hepatitis | 4 | 4 | 39 | 390 | en_640feff0076ea_Vol_50_no_01-english.pdf |
+| 2023-W15 | viral_hepatitis | 6 | 6 | 10 | 105 | en_6450a83ec365f_Vol_50_no_16-english.pdf |
+| 2023-W16 | viral_hepatitis | 7 | 7 | 11 | 113 | en_647d696889d75_Vol_50_no_17-english_2.pdf |
+
+## 5b. Weekly columns copied or scrambled (source errors)
+
+Some issues print a weekly (A) column that repeats the previous week's exactly, while the cumulative column is advanced by the copied figures, so every sum and cumulative check passes. Confirmed on the rendered pages for Vol 53 No 26 vs No 27 (dengue: Colombo 1138, Gampaha 1294, Kandy 472 ... in both). Rule: a (week, disease) group is queued (`stale_weekly_copy`) when at least 8 districts report a non-zero count and at least 80% of them equal the previous week, or when at least 70% of all non-zero district cells of the whole issue repeat (the highest other week scores 42%). The true counts of those weeks are unknown, so nothing is corrected.
+
+| week | disease | scope | repeated / non-zero districts | issue share % |
+|---|---|---|---|---|
+| 2022-W22 | chickenpox | whole issue | 12 / 14 | 84.0 |
+| 2022-W22 | dengue | whole issue | 18 / 25 | 84.0 |
+| 2022-W22 | dysentery | whole issue | 7 / 7 | 84.0 |
+| 2022-W22 | encephalitis | whole issue | 0 / 0 | 84.0 |
+| 2022-W22 | enteric_fever | whole issue | 1 / 1 | 84.0 |
+| 2022-W22 | food_poisoning | whole issue | 2 / 2 | 84.0 |
+| 2022-W22 | human_rabies | whole issue | 0 / 1 | 84.0 |
+| 2022-W22 | leishmaniasis | whole issue | 10 / 11 | 84.0 |
+| 2022-W22 | leptospirosis | whole issue | 17 / 20 | 84.0 |
+| 2022-W22 | meningitis | whole issue | 4 / 5 | 84.0 |
+| 2022-W22 | typhus | whole issue | 6 / 6 | 84.0 |
+| 2022-W22 | viral_hepatitis | whole issue | 2 / 2 | 84.0 |
+| 2024-W11 | chickenpox | disease column | 20 / 20 | 25.8 |
+| 2024-W39 | tuberculosis | disease column | 20 / 20 | 22.0 |
+| 2025-W07 | chickenpox | whole issue | 22 / 22 | 87.3 |
+| 2025-W07 | dengue | whole issue | 26 / 26 | 87.3 |
+| 2025-W07 | dysentery | whole issue | 11 / 11 | 87.3 |
+| 2025-W07 | encephalitis | whole issue | 5 / 5 | 87.3 |
+| 2025-W07 | enteric_fever | whole issue | 0 / 0 | 87.3 |
+| 2025-W07 | food_poisoning | whole issue | 7 / 7 | 87.3 |
+| 2025-W07 | human_rabies | whole issue | 0 / 0 | 87.3 |
+| 2025-W07 | leishmaniasis | whole issue | 10 / 10 | 87.3 |
+| 2025-W07 | leptospirosis | whole issue | 24 / 24 | 87.3 |
+| 2025-W07 | meningitis | whole issue | 13 / 13 | 87.3 |
+| 2025-W07 | tuberculosis | whole issue | 0 / 20 | 87.3 |
+| 2025-W07 | typhus | whole issue | 13 / 13 | 87.3 |
+| 2025-W07 | viral_hepatitis | whole issue | 7 / 7 | 87.3 |
+| 2026-W26 | dengue | disease column | 26 / 26 | 29.8 |
+
+Second rule, `scrambled_weekly_column`: the weekly column is printed against the wrong rows (confirmed on the rendered page of Vol 53 No 15, 2026-W14: dengue Colombo 9, Matale 256, Nuwara Eliya 113, Kilinochchi 117, where the weeks around read about 300, 20, 6 and 1; the national total and the cumulatives are consistent with the scrambled column). Past-only test: with >= 20 non-zero districts, the rank correlation (Spearman) of this week's district counts with last week's is below 0.3 while last week and the week before agreed (>= 0.7; for dengue the typical week-to-week value is 0.93). Two or more diseases tripping in one week flag the whole issue.
+
+| week | scope | diseases | min_rho |
+|---|---|---|---|
+| 2026-W03 | disease column | chickenpox | 0.2 |
+| 2026-W07 | disease column | chickenpox | 0.1 |
+| 2026-W14 | whole issue | chickenpox, dengue, dysentery, encephalitis, enteric_fever, food_poisoning, human_rabies, leishmaniasis, leprosy, leptospirosis, meningitis, tuberculosis, typhus, viral_hepatitis | -0.0 |
+| 2026-W24 | whole issue | chickenpox, dengue, dysentery, encephalitis, enteric_fever, food_poisoning, human_rabies, leishmaniasis, leprosy, leptospirosis, meningitis, tuberculosis, typhus, viral_hepatitis | -0.2 |
 
 ## 6. Week sequence: gaps and duplicates
 
 | year | weeks present | expected | missing weeks |
 |---|---|---|---|
-| 2021 | 2 | n/a (out of range) |  |
 | 2022 | 51 | 1..52 | 43 |
-| 2023 | 50 | 1..52 | 1, 40 |
-| 2024 | 50 | 1..52 | 23, 35 |
+| 2023 | 52 | 1..52 | none |
+| 2024 | 51 | 1..52 | 35 |
 | 2025 | 52 | 1..52 | none |
-| 2026 | 30 | 1..33 | 1, 2, 31 |
+| 2026 | 33 | 1..33 | none |
 
 Missing weeks are almost entirely issues that failed to parse (section 2: printed-week typos) or that the website does not list.
 
@@ -255,70 +261,73 @@ Missing weeks are almost entirely issues that failed to parse (section 2: printe
 
 None. A misprinted week (wrong month or year) used to look like a duplicate of the real week; the weekday and printed-week checks in section 8 now reject such issues instead.
 
-## 7. Completeness (C**) and timeliness (T*) per RDHS
+## 7. Completeness (C**) and timeliness (T*)
 
-From the parsed issues (one value per RDHS per week, values outside 0..100 excluded). min / p10 / median over all weeks. **T\* is not comparable across years** (see national table below).
+**C\*\* is not defined in any of the 244 issues (section 9), so it is used only relatively:** `completeness_low` is true when an RDHS's C\*\* for the week is below that RDHS's own 10th percentile of C\*\* over its past weeks (expanding window, the current week excluded, at least 26 past weeks, so 2022 H1 is empty). No absolute threshold is used. **T\* is for display only**: it steps from 42% to 93% at 2023-W52 (national), so it cannot be compared across years.
 
-| area | weeks | C min | C p10 | C median | T min | T p10 | T median |
+Values outside 0..100 were set to NaN (the counts of those rows are kept): C\*\*: 9 area-weeks (9 RDHS), values [194.0, 195.0, 200.0, 1000.0]; T\*: 7 area-weeks, values [152.0, 153.0, 320.0, 330.0, 350.0].
+
+### Per RDHS (C** min / p10 / median over all weeks; completeness_low rate)
+
+| area | weeks | C min | C p10 | C median | weeks with a threshold | completeness_low weeks | % low |
 |---|---|---|---|---|---|---|---|
-| Ampara | 235 | 14.0 | 93.0 | 100.0 | 5.0 | 9.0 | 71.0 |
-| Anuradhapura | 235 | 42.0 | 88.0 | 100.0 | 0.0 | 8.4 | 73.0 |
-| Badulla | 235 | 10.0 | 100.0 | 100.0 | 0.0 | 13.4 | 81.0 |
-| Batticaloa | 235 | 10.0 | 99.0 | 100.0 | 0.0 | 28.4 | 79.0 |
-| Colombo | 235 | 10.0 | 94.0 | 100.0 | 0.0 | 13.0 | 88.0 |
-| Galle | 235 | 10.0 | 99.0 | 100.0 | 0.0 | 10.0 | 70.0 |
-| Gampaha | 235 | 7.0 | 72.0 | 100.0 | 0.0 | 1.0 | 67.0 |
-| Hambantota | 235 | 10.0 | 99.0 | 100.0 | 0.0 | 13.0 | 85.0 |
-| Jaffna | 235 | 80.0 | 88.0 | 93.0 | 20.0 | 57.4 | 86.0 |
-| Kalmunai | 235 | 10.0 | 99.0 | 100.0 | 0.0 | 26.4 | 77.0 |
-| Kalutara | 223 | 1.0 | 62.0 | 100.0 | 0.0 | 2.0 | 73.0 |
-| Kandy | 234 | 10.0 | 97.3 | 100.0 | 1.0 | 11.0 | 89.0 |
-| Kegalle | 235 | 10.0 | 99.0 | 100.0 | 0.0 | 8.0 | 73.0 |
-| Kilinochchi | 234 | 10.0 | 99.0 | 100.0 | 8.0 | 19.0 | 100.0 |
-| Kurunegala | 235 | 10.0 | 97.0 | 100.0 | 0.0 | 8.0 | 53.0 |
-| Mannar | 235 | 10.0 | 80.0 | 100.0 | 11.0 | 18.0 | 100.0 |
-| Matale | 234 | 10.0 | 99.0 | 100.0 | 0.0 | 17.0 | 82.0 |
-| Matara | 235 | 10.0 | 100.0 | 100.0 | 0.0 | 18.4 | 76.0 |
-| Monaragala | 235 | 10.0 | 99.0 | 100.0 | 0.0 | 8.4 | 73.0 |
-| Mullaitivu | 235 | 10.0 | 94.0 | 100.0 | 8.0 | 20.0 | 83.0 |
-| Nuwara Eliya | 235 | 10.0 | 94.0 | 100.0 | 0.0 | 18.8 | 85.0 |
-| Polonnaruwa | 235 | 72.0 | 88.0 | 99.0 | 0.0 | 15.0 | 88.0 |
-| Puttalam | 235 | 10.0 | 90.0 | 100.0 | 8.0 | 13.0 | 54.0 |
-| Ratnapura | 235 | 10.0 | 95.0 | 100.0 | 0.0 | 12.0 | 82.0 |
-| Trincomalee | 235 | 10.0 | 91.0 | 100.0 | 0.0 | 17.0 | 83.0 |
-| Vavuniya | 235 | 10.0 | 85.0 | 100.0 | 0.0 | 0.0 | 75.0 |
+| Ampara | 239 | 14.0 | 93.0 | 100.0 | 210 | 36 | 17.1 |
+| Anuradhapura | 239 | 42.0 | 87.8 | 100.0 | 210 | 19 | 9.0 |
+| Badulla | 239 | 10.0 | 100.0 | 100.0 | 210 | 14 | 6.7 |
+| Batticaloa | 239 | 10.0 | 99.0 | 100.0 | 210 | 15 | 7.1 |
+| Colombo | 239 | 10.0 | 93.8 | 100.0 | 210 | 21 | 10.0 |
+| Galle | 239 | 10.0 | 99.0 | 100.0 | 210 | 13 | 6.2 |
+| Gampaha | 239 | 7.0 | 72.0 | 100.0 | 210 | 4 | 1.9 |
+| Hambantota | 239 | 10.0 | 99.0 | 100.0 | 210 | 10 | 4.8 |
+| Jaffna | 239 | 80.0 | 88.0 | 93.0 | 210 | 7 | 3.3 |
+| Kalmunai | 239 | 10.0 | 99.0 | 100.0 | 210 | 21 | 10.0 |
+| Kalutara | 230 | 1.0 | 59.5 | 100.0 | 201 | 10 | 5.0 |
+| Kandy | 239 | 10.0 | 97.0 | 100.0 | 210 | 2 | 1.0 |
+| Kegalle | 239 | 10.0 | 99.0 | 100.0 | 210 | 20 | 9.5 |
+| Kilinochchi | 239 | 10.0 | 99.0 | 100.0 | 210 | 16 | 7.6 |
+| Kurunegala | 239 | 10.0 | 97.0 | 100.0 | 210 | 17 | 8.1 |
+| Mannar | 239 | 10.0 | 80.0 | 100.0 | 210 | 10 | 4.8 |
+| Matale | 239 | 10.0 | 99.0 | 100.0 | 210 | 19 | 9.0 |
+| Matara | 239 | 10.0 | 100.0 | 100.0 | 210 | 17 | 8.1 |
+| Monaragala | 239 | 10.0 | 99.0 | 100.0 | 210 | 19 | 9.0 |
+| Mullaitivu | 239 | 10.0 | 94.0 | 100.0 | 210 | 23 | 11.0 |
+| Nuwara Eliya | 239 | 10.0 | 94.0 | 100.0 | 210 | 28 | 13.3 |
+| Polonnaruwa | 239 | 72.0 | 88.0 | 99.0 | 210 | 8 | 3.8 |
+| Puttalam | 239 | 10.0 | 90.0 | 100.0 | 210 | 20 | 9.5 |
+| Ratnapura | 239 | 10.0 | 95.0 | 100.0 | 210 | 8 | 3.8 |
+| Trincomalee | 239 | 10.0 | 91.0 | 100.0 | 210 | 8 | 3.8 |
+| Vavuniya | 239 | 10.0 | 84.6 | 100.0 | 210 | 5 | 2.4 |
 
-### National row, by year
+### National row, by year (T* shown only to document the 2023-W52 step)
 
 | epi_year | weeks | C_median | T_median | T_min |
 |---|---|---|---|---|
-| 2021 | 2 | 97.0 | 39.0 | 38.0 |
 | 2022 | 51 | 95.0 | 17.0 | 5.0 |
-| 2023 | 50 | 98.0 | 35.5 | 25.0 |
-| 2024 | 50 | 99.0 | 93.0 | 40.0 |
+| 2023 | 52 | 98.0 | 35.5 | 25.0 |
+| 2024 | 51 | 99.0 | 93.0 | 40.0 |
 | 2025 | 52 | 99.0 | 94.0 | 65.0 |
-| 2026 | 30 | 98.5 | 91.5 | 58.0 |
+| 2026 | 33 | 99.0 | 91.0 | 58.0 |
 
 ## 8. What the parser saw
 
-Disease columns per issue: {12: 112, 13: 92, 14: 31} (12 -> 13 with Tuberculosis from Vol 51 No 11 -> 14 with Leprosy from Vol 53 No 1; see docs/LAYOUTS.md).
+Disease columns per issue: {12: 114, 13: 93, 14: 34} (12 -> 13 with Tuberculosis from Vol 51 No 11 -> 14 with Leprosy from Vol 53 No 1; see docs/LAYOUTS.md).
 
 Printed header spellings mapped to each disease (all explicit aliases in `config/sources.yaml`; an unknown spelling is a hard failure):
 
-- dengue: `Dengue Fever` x234, `Dengue` x1
-- dysentery: `Dysentery` x235
-- encephalitis: `Encephalitis` x122, `Encephaliti` x79, `Encephalit` x22, `Encephali` x12
-- enteric_fever: `En. Fever` x123, `Enteric Fever` x98, `Enteric` x11, `Enteric F.` x3
-- food_poisoning: `Food Poi-` x101, `F. Poisoning` x94, `F. Poison-` x29, `Food Poison-` x11
-- leptospirosis: `Leptospirosis` x235
-- typhus: `Typhus` x140, `Typhus F.` x92, `Typhus Fev.` x2, `Typhus Fe-` x1
-- viral_hepatitis: `Viral Hep.` x123, `Viral Hep-` x58, `Viral` x22, `Viral Hepa-` x18, `V. Hep.` x14
-- human_rabies: `Human` x98, `H. Rabiies` x92, `H. Rabies` x31, `H. Rabi.` x14
-- chickenpox: `Chickenpox` x235
-- meningitis: `Meningitis` x235
-- leishmaniasis: `Leishmania-` x202, `Leishman.` x31, `Leishmani-` x1, `Leishmaniasis` x1
-- tuberculosis: `Tuberculosis` x123
-- leprosy: `Leprosy` x31
+- dengue: `Dengue Fever` x240, `Dengue` x1
+- dysentery: `Dysentery` x241
+- encephalitis: `Encephalitis` x126, `Encephaliti` x80, `Encephalit` x23, `Encephali` x12
+- enteric_fever: `En. Fever` x127, `Enteric Fever` x100, `Enteric` x11, `Enteric F.` x3
+- food_poisoning: `Food Poi-` x103, `F. Poisoning` x97, `F. Poison-` x30, `Food Poison-` x11
+- leptospirosis: `Leptospirosis` x241
+- typhus: `Typhus` x143, `Typhus F.` x93, `Typhus Fev.` x4, `Typhus Fe-` x1
+- viral_hepatitis: `Viral Hep.` x127, `Viral Hep-` x59, `Viral` x23, `Viral Hepa-` x18, `V. Hep.` x14
+- human_rabies: `Human` x100, `H. Rabiies` x93, `H. Rabies` x34, `H. Rabi.` x14
+- chickenpox: `Chickenpox` x241
+- meningitis: `Meningitis` x241
+- leishmaniasis: `Leishmania-` x205, `Leishman.` x34, `Leishmani-` x1, `Leishmaniasis` x1
+- tuberculosis: `Tuberculosis` x127
+- leprosy: `Leprosy` x34
 
 Cell-level oddities across all parsed issues: {'blank': 4, 'unreadable': 2, 'pct_format': 32}. T*/C** printed as `8%` or `5.5` in `pct_format` cells are read as numbers. Blank/unreadable count cells put their whole (week, disease) group in review. Issues with such cells: Vol 50 No 52 (0 blank, 1 unreadable); Vol 53 No 8 (1 blank, 0 unreadable); Vol 49 No 7 (0 blank, 1 unreadable); Vol 49 No 17 (1 blank, 0 unreadable); Vol 49 No 38 (2 blank, 0 unreadable).
 
@@ -326,15 +335,17 @@ Checks applied to every parsed issue: Table 1 title found by content; RDHS/WRCD 
 
 ## 9. What do T* and C** mean? (investigation)
 
+**C\*\* is undefined in all 244 issues; we use relative gating only** (`completeness_low`, section 7). T\* is used for display only.
+
 Footnote text under Table 1 in the parsed issues (digits and dates masked), most common first:
 
-- x56 (e.g. Vol 50 No 1): `Source: Weekly Returns of Communicable Diseases (esurvillance.epid.gov.lk). T=Timeliness refers to returns received on or before <date> Total number of reporting units N Number of reporting units data provided for the current week: N C**-Completeness *`
+- x58 (e.g. Vol 50 No 1): `Source: Weekly Returns of Communicable Diseases (esurvillance.epid.gov.lk). T=Timeliness refers to returns received on or before <date> Total number of reporting units N Number of reporting units data provided for the current week: N C**-Completeness *`
 - x42 (e.g. Vol 50 No 46): `Source: Weekly Returns of Communicable Diseases (esurvillance.epid.gov.lk). T=Timeliness refers to returns received on or before <date> Total number of reporting units N Number of reporting units data provided for the current week: 358C**-Completeness * A = Cases reported during the current week. B = Cumulative cases for the yea`
 - x31 (e.g. Vol 50 No 22): `Source: Weekly Returns of Communicable Diseases (esurvillance.epid.gov.lk). T=Timeliness refers to returns received on or before <date> Total number of reporting units N Number of reporting units data provided for the current week: N C**-Completeness * A = Cases reported during the current week. B = Cumulative cases for the year`
 - x22 (e.g. Vol 52 No 31): `Source: Weekly Returns of Communicable Diseases (esurvillance.epid.gov.lk). T=Timeliness refers to returns received on or before <date> Total number of reporting units N Number of reporting units data provided for the current week: N. C**-Completeness * A = Cases reported during the current week. B = Cumulative cases for the yea`
-- x18 (e.g. Vol 53 No 15): `Source: WRCD module of the EPINET. T*=Timeliness refers to returns received on or before <date>. Total number of reporting units N C**-Completeness; A = Cases reported during the current week; B = Cumulative cases for the year. C**-Completeness;`
+- x19 (e.g. Vol 53 No 15): `Source: WRCD module of the EPINET. T*=Timeliness refers to returns received on or before <date>. Total number of reporting units N C**-Completeness; A = Cases reported during the current week; B = Cumulative cases for the year. C**-Completeness;`
 - x10 (e.g. Vol 52 No 20): `Source: Weekly Returns of Communicable Diseases (esurvillance.epid.gov.lk). T=Timeliness refers to returns received on or before <date> Total number of reporting units N Number of reporting units data provided for the current week: 360C**-Completeness * A = Cases reported during the current week. B = Cumulative cases for the yea`
-- x6 (e.g. Vol 53 No 4): `Source: WRCD module of the EPINET. T*=Timeliness refers to returns received on or before <date>. Total number of reporting units N. Data provided for the current week: N. C**-Completeness; A = Cases reported during the current week; B = Cumulative cases for the year.`
+- x7 (e.g. Vol 53 No 2): `Source: WRCD module of the EPINET. T*=Timeliness refers to returns received on or before <date>. Total number of reporting units N. Data provided for the current week: N. C**-Completeness; A = Cases reported during the current week; B = Cumulative cases for the year.`
 - x5 (e.g. Vol 51 No 1): `Source: Weekly Returns of Communicable Diseases (esurvillance.epid.gov.lk). T=Timeliness refers to returns received on or before <date> Total number of reporting units N Number of reporting units data provided for the current week: 356C**-Completeness * A = Cases reported during the current week. B = Cumulative cases for the yea`
 
 ### Findings (hand-written 2 Nov 2026, from all 244 PDFs)
@@ -365,11 +376,29 @@ Footnote text under Table 1 in the parsed issues (digits and dates masked), most
 
 **Conclusion: still unclear.** The most defensible reading is that C\*\* is the share of expected weekly returns received for that RDHS and week, and T\* the share received by the Friday cut-off, but the PDFs do not confirm the numerator, denominator or whether late returns count towards C\*\*. Do not describe C\*\* more precisely than "reporting completeness as printed by the Epidemiology Unit" until the Unit confirms. For gating alerts, C\*\* is the usable signal; T\* should not be used without a per-year baseline.
 
-## 10. Reproduce
+## 10. Independent checks
+
+**Second extractor (PyMuPDF, `scripts/cross_extract.py`, details in `docs/CROSS_EXTRACT.md`):**
+
+- Cells compared: **177,876** from 241 issues
+- Agreement: **100.000%**; disagreements: **0** (all listed in `data/review_queue/cross_extract.csv`)
+- Of the agreeing cells, 6 are blank or unreadable in both extractors (e.g. a stray `v` where a digit should be); they stay in review.
+- Both libraries read the PDF's embedded text layer, so this rules out parser bugs (row, column and token handling) but not a text layer that differs from the printed page; the hand-check pack covers that.
+- Issues not compared: 3
+
+<!-- handcheck:start -->
+## Hand-check (manual verification against the rendered page)
+
+Pack ready, not yet scored: 40 cells in `data/handcheck/v2/` (one image per cell, fixed seed, 8 per year 2022-2026, no two from one issue). Fill `verified` and run `python scripts/handcheck_score.py`.
+<!-- handcheck:end -->
+
+## 12. Reproduce
 
 ```
 python -m radar_lk.ingest.download --source wer --years 2022-2026
 python -m radar_lk.ingest.parse_wer
-python scripts/handcheck.py
+python scripts/cross_extract.py        # second extractor (PyMuPDF), cell-by-cell
+python scripts/handcheck.py            # hand-check pack v2 (refuses to overwrite)
+python scripts/handcheck_score.py      # after filling the CSV
 pytest -q
 ```

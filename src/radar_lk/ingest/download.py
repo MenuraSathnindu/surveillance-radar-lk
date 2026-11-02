@@ -70,7 +70,9 @@ class Fetcher:
             elif resp.status_code == 404:
                 rp.allow_all = True
             else:
-                print(f"[warn] {root}/robots.txt returned {resp.status_code}; treating as disallowed")
+                print(
+                    f"[warn] {root}/robots.txt returned {resp.status_code}; treating as disallowed"
+                )
                 rp.disallow_all = True
         self._last = time.monotonic()
         self._robots[root] = rp

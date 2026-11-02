@@ -26,7 +26,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.4"]
+# pymupdf (AGPL) is only a dev tool: scripts/cross_extract.py uses it as an independent second
+# extractor to check the pdfplumber parser. Nothing in src/ imports it.
+# matplotlib draws the static backtest figures in docs/figures (the dashboard uses plotly).
+dev = ["pytest>=8", "ruff>=0.4", "pymupdf>=1.24", "matplotlib>=3.8"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

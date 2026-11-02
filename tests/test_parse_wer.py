@@ -7,6 +7,7 @@ parser's own output. Fixtures live in tests/fixtures (real WER issues, original 
 from datetime import date
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pdfplumber
 import pytest
@@ -24,7 +25,7 @@ from radar_lk.ingest.parse_wer import (
     parse_week,
     upright_text,
 )
-from radar_lk.ingest.validate import NATIONAL, reclassify_source_total_errors, validate
+from radar_lk.ingest.validate import NATIONAL, cross_week_gap, within_issue_split
 
 FIX = Path(__file__).parent / "fixtures"
 CAL = load_config()["wer_calendar"]
@@ -33,42 +34,71 @@ CAL = load_config()["wer_calendar"]
 # C = completeness C**, T = timeliness T*
 GOLDEN = {
     "wer_2022_vol49_no26.pdf": dict(
-        issue="Vol 49 No 26", week=(2022, 25), start=date(2022, 6, 18), n_diseases=12,
+        issue="Vol 49 No 26",
+        week=(2022, 25),
+        start=date(2022, 6, 18),
+        n_diseases=12,
         cells=[
-            ("Colombo", "dengue", "cases", 58), ("Colombo", "dengue", "cum", 5291),
-            ("Jaffna", "typhus", "cases", 3), ("Jaffna", "typhus", "cum", 399),
-            ("Kalmunai", "chickenpox", "cases", 1), ("Kalmunai", "chickenpox", "cum", 31),
-            ("Colombo", "dengue", "T", 14), ("Colombo", "dengue", "C", 97),
+            ("Colombo", "dengue", "cases", 58),
+            ("Colombo", "dengue", "cum", 5291),
+            ("Jaffna", "typhus", "cases", 3),
+            ("Jaffna", "typhus", "cum", 399),
+            ("Kalmunai", "chickenpox", "cases", 1),
+            ("Kalmunai", "chickenpox", "cum", 31),
+            ("Colombo", "dengue", "T", 14),
+            ("Colombo", "dengue", "C", 97),
             # the printed national weekly dengue is 20 although the districts add to 809
-            (NATIONAL, "dengue", "cases", 20), (NATIONAL, "dengue", "cum", 26602),
+            (NATIONAL, "dengue", "cases", 20),
+            (NATIONAL, "dengue", "cum", 26602),
             (NATIONAL, "leptospirosis", "cum", 2513),
-            (NATIONAL, "dengue", "T", 17), (NATIONAL, "dengue", "C", 94),
+            (NATIONAL, "dengue", "T", 17),
+            (NATIONAL, "dengue", "C", 94),
         ],
     ),
     "wer_2024_vol51_no26.pdf": dict(
-        issue="Vol 51 No 26", week=(2024, 25), start=date(2024, 6, 15), n_diseases=13,
+        issue="Vol 51 No 26",
+        week=(2024, 25),
+        start=date(2024, 6, 15),
+        n_diseases=13,
         cells=[
-            ("Colombo", "dengue", "cases", 218), ("Colombo", "dengue", "cum", 5592),
-            ("Colombo", "tuberculosis", "cases", 26), ("Colombo", "tuberculosis", "cum", 1036),
+            ("Colombo", "dengue", "cases", 218),
+            ("Colombo", "dengue", "cum", 5592),
+            ("Colombo", "tuberculosis", "cases", 26),
+            ("Colombo", "tuberculosis", "cum", 1036),
             ("Kandy", "tuberculosis", "cum", 323),  # cells touch the T*/C** cells in this row
-            ("Kalmunai", "dengue", "cases", 5), ("Kalmunai", "dysentery", "cum", 15),
-            ("Colombo", "dengue", "T", 95), ("Colombo", "dengue", "C", 100),
+            ("Kalmunai", "dengue", "cases", 5),
+            ("Kalmunai", "dysentery", "cum", 15),
+            ("Colombo", "dengue", "T", 95),
+            ("Colombo", "dengue", "C", 100),
             ("Galle", "dengue", "T", 0),
-            (NATIONAL, "dengue", "cases", 683), (NATIONAL, "dengue", "cum", 30037),
-            (NATIONAL, "leptospirosis", "cum", 5833), (NATIONAL, "tuberculosis", "cases", 166),
-            (NATIONAL, "dengue", "T", 90), (NATIONAL, "dengue", "C", 99),
+            (NATIONAL, "dengue", "cases", 683),
+            (NATIONAL, "dengue", "cum", 30037),
+            (NATIONAL, "leptospirosis", "cum", 5833),
+            (NATIONAL, "tuberculosis", "cases", 166),
+            (NATIONAL, "dengue", "T", 90),
+            (NATIONAL, "dengue", "C", 99),
         ],
     ),
     "wer_2026_vol53_no26.pdf": dict(
-        issue="Vol 53 No 26", week=(2026, 25), start=date(2026, 6, 15), n_diseases=14,
+        issue="Vol 53 No 26",
+        week=(2026, 25),
+        start=date(2026, 6, 15),
+        n_diseases=14,
         cells=[
-            ("Colombo", "dengue", "cases", 1138), ("Colombo", "dengue", "cum", 9357),
-            ("Colombo", "leprosy", "cases", 3), ("Colombo", "leprosy", "cum", 83),
-            ("Kalmunai", "leprosy", "cum", 23), ("Kalmunai", "dengue", "cum", 640),
-            ("Gampaha", "dengue", "C", 86), ("Gampaha", "dengue", "T", 73),
-            (NATIONAL, "dengue", "cases", 5828), (NATIONAL, "dengue", "cum", 45879),
-            (NATIONAL, "leptospirosis", "cases", 171), (NATIONAL, "tuberculosis", "cum", 3944),
-            (NATIONAL, "leprosy", "cum", 584), (NATIONAL, "dengue", "T", 90),
+            ("Colombo", "dengue", "cases", 1138),
+            ("Colombo", "dengue", "cum", 9357),
+            ("Colombo", "leprosy", "cases", 3),
+            ("Colombo", "leprosy", "cum", 83),
+            ("Kalmunai", "leprosy", "cum", 23),
+            ("Kalmunai", "dengue", "cum", 640),
+            ("Gampaha", "dengue", "C", 86),
+            ("Gampaha", "dengue", "T", 73),
+            (NATIONAL, "dengue", "cases", 5828),
+            (NATIONAL, "dengue", "cum", 45879),
+            (NATIONAL, "leptospirosis", "cases", 171),
+            (NATIONAL, "tuberculosis", "cum", 3944),
+            (NATIONAL, "leprosy", "cum", 584),
+            (NATIONAL, "dengue", "T", 90),
             (NATIONAL, "dengue", "C", 99),
         ],
     ),
@@ -104,6 +134,7 @@ def test_2022_national_total_is_a_source_error():
 
 # ------------------------------------------------------------------ finding Table 1
 
+
 def test_finds_table_by_content_and_rejects_water_quality_decoy():
     with pdfplumber.open(FIX / "wer_2026_vol53_no26.pdf") as pdf:
         page2 = upright_text(pdf.pages[1])
@@ -133,8 +164,10 @@ def test_unmapped_district_is_a_hard_failure():
 
 # ------------------------------------------------------------------ weeks
 
+
 def test_new_year_crossing_week_real_pdf():
-    # Table 1 of Vol 52 No 2: "28th Dec - 03rd Jan 2025 (1st Week)", Sat 28 Dec 2024 - Fri 3 Jan 2025
+    # Table 1 of Vol 52 No 2: "28th Dec - 03rd Jan 2025 (1st Week)"
+    # = Sat 28 Dec 2024 - Fri 3 Jan 2025
     res = parse_issue(FIX / "wer_vol52_no02_newyear_2024_25.pdf")
     assert res.status == "ok", res.reason
     assert res.meta["start"] == date(2024, 12, 28) and res.meta["end"] == date(2025, 1, 3)
@@ -215,94 +248,396 @@ def test_check_week_rules():
         check_week(date(2024, 8, 17), date(2024, 8, 23), 35, CAL)
 
 
-# ------------------------------------------------------------------ validation rules
+# ------------------------------------------------------------------ validation
+
+# Real 2022-W25 dengue (Vol 49 No 26): the 26 RDHS rows in table order, read off the rendered page.
+W25_WEEKLY = [
+    58,
+    17,
+    14,
+    21,
+    61,
+    10,
+    15,
+    53,
+    82,
+    67,
+    4,
+    4,
+    0,
+    4,
+    29,
+    8,
+    20,
+    86,
+    34,
+    13,
+    9,
+    51,
+    23,
+    84,
+    11,
+    31,
+]
+W25_CUM = [
+    5291,
+    3312,
+    1859,
+    1660,
+    422,
+    104,
+    1832,
+    566,
+    717,
+    2080,
+    83,
+    163,
+    53,
+    39,
+    857,
+    96,
+    927,
+    1442,
+    1126,
+    205,
+    67,
+    575,
+    218,
+    1277,
+    1061,
+    570,
+]
+
 
 def _frame(rows):
-    return pd.DataFrame(rows, columns=["epi_year", "epi_week", "area", "disease", "cases", "cum_cases"]
-                        ).assign(source_file="f.pdf")
+    cols = ["epi_year", "epi_week", "area", "disease", "cases", "cum_cases"]
+    df = pd.DataFrame(rows, columns=cols)
+    df["area_level"] = np.where(df["area"] == NATIONAL, "national", "rdhs")
+    df["completeness_pct"], df["timeliness_pct"] = 100.0, 50.0
+    df["source_file"], df["validated"] = "f.pdf", False
+    return df
 
 
-def _split(df):
-    passed, failed = validate(df)
-    return reclassify_source_total_errors(passed, failed)
+def _group(year, week, weekly, cum, nat_weekly=None, nat_cum=None, disease="dengue"):
+    rows = [
+        (year, week, f"D{i:02d}", disease, w, c)
+        for i, (w, c) in enumerate(zip(weekly, cum, strict=True))
+    ]
+    rows.append(
+        (
+            year,
+            week,
+            NATIONAL,
+            disease,
+            sum(weekly) if nat_weekly is None else nat_weekly,
+            sum(cum) if nat_cum is None else nat_cum,
+        )
+    )
+    return rows
 
 
-def _dengue_2022_case(national_cases=20, national_cum=26602, with_prev_week=True):
-    """Week 24 is fine; in week 25 the districts add to 809 but the national row prints 20."""
-    rows = []
-    d24 = {"Colombo": (500, 4000), "Gampaha": (200, 2500), "Kandy": (100, 1000)}
-    d25 = {"Colombo": (400, 4400), "Gampaha": (250, 2750), "Kandy": (159, 1159)}  # sum 809
-    if with_prev_week:
-        rows += [(2022, 24, a, "dengue", c, m) for a, (c, m) in d24.items()]
-        rows.append((2022, 24, NATIONAL, "dengue", 800, 7500))
-    rows += [(2022, 25, a, "dengue", c, m) for a, (c, m) in d25.items()]
-    rows.append((2022, 25, NATIONAL, "dengue", national_cases, national_cum))
-    return _frame(rows)
-
-
-def test_source_total_error_2022_dengue_case():
-    # districts add to 809, the national row prints 20 and a cumulative that is not 7500 + 20
-    passed, failed, errors = _split(_dengue_2022_case(national_cases=20, national_cum=26602))
+def test_real_2022_w25_dengue_numbers():
+    assert sum(W25_WEEKLY) == 809 and sum(W25_CUM) == 26602  # as read off the page
+    # the real fixture agrees with the hand-copied numbers
+    res = parse_issue(FIX / "wer_2022_vol49_no26.pdf")
+    dengue = [r for r in res.rows if r["disease"] == "dengue" and r["area"] != NATIONAL]
+    assert [r["cases"] for r in dengue] == W25_WEEKLY
+    assert [r["cum_cases"] for r in dengue] == W25_CUM
+    # districts' cumulatives add to the national cumulative; the printed weekly (20) does not
+    df = _frame(_group(2022, 25, W25_WEEKLY, W25_CUM, nat_weekly=20, nat_cum=26602))
+    kept, review, errors = within_issue_split(df)
     assert len(errors) == 1
     e = errors.iloc[0]
     assert (e["printed_national_cases"], e["district_sum_cases"]) == (20, 809)
-    wk25 = passed[passed["epi_week"] == 25]
-    assert set(wk25["area"]) == {"Colombo", "Gampaha", "Kandy"} and wk25["validated"].all()
-    assert (wk25["note"] == "national_total_source_error").all()
-    bad = failed[failed["epi_week"] == 25]
-    assert list(bad["area"]) == [NATIONAL]  # only the national row goes to review
-    assert bad["fail_reason"].iloc[0].startswith("source_total_error")
+    assert len(kept) == 26 and kept["validated"].all()
+    assert set(kept["note"]) == {"national_weekly_source_error"}
+    assert list(review["area"]) == [NATIONAL]
+    assert list(review["fail_reason"]) == ["national_weekly_source_error"]
 
 
-def test_rule_does_not_fire_when_a_district_fails_its_own_cumulative_check():
-    df = _dengue_2022_case()
-    df.loc[(df["epi_week"] == 25) & (df["area"] == "Kandy"), "cum_cases"] = 2000  # not 1000 + 159
-    passed, failed, errors = _split(df)
-    assert errors.empty
-    assert len(failed[failed["epi_week"] == 25]) == 4  # nothing is reclassified: all four rows stay failed
-    assert not (passed["note"] == "national_total_source_error").any()
+def test_neither_column_adding_up_sends_the_whole_group_to_review():
+    df = _frame(_group(2022, 25, W25_WEEKLY, W25_CUM, nat_weekly=20, nat_cum=26602 + 1))
+    kept, review, errors = within_issue_split(df)
+    assert kept.empty and errors.empty and len(review) == 27
+    assert set(review["fail_reason"]) == {"cum_sum_mismatch"}
 
 
-def test_rule_does_not_fire_when_cumulative_status_is_unknown():
-    # without the previous week the cumulative check cannot be evaluated, so nothing is assumed
-    passed, failed, errors = _split(_dengue_2022_case(with_prev_week=False))
-    assert errors.empty
-    assert len(failed) == 4 and set(failed["fail_reason"]) == {"sum_mismatch;"}
+def test_national_cumulative_source_error_keeps_districts():
+    # weekly counts add up (809 = 809) but the printed national cumulative is off: e.g. TB 2024,
+    # where the districts exceed the national cumulative by exactly 66 every week
+    df = _frame(_group(2024, 30, W25_WEEKLY, W25_CUM, nat_cum=26602 - 66))
+    kept, review, errors = within_issue_split(df)
+    assert len(kept) == 26 and kept["validated"].all()
+    assert set(kept["note"]) == {"national_cumulative_source_error"}
+    assert list(review["area"]) == [NATIONAL]
+    assert list(review["fail_reason"]) == ["national_cumulative_source_error"]
+    assert list(errors["kind"]) == ["national_cumulative_source_error"]
+    assert (errors["district_sum_cum"] - errors["printed_national_cum"]).tolist() == [66]
 
 
-def test_rule_does_not_fire_when_national_cumulative_is_consistent():
-    # printed 20 weekly but cum = 7500 + 20: internally consistent, so the sum mismatch is not
-    # attributable to a bad printed total
-    passed, failed, errors = _split(_dengue_2022_case(national_cases=20, national_cum=7520))
-    assert errors.empty
-    assert len(failed[failed["epi_week"] == 25]) == 4
+def test_weeks_before_2022_are_dropped():
+    df = _frame(_group(2021, 52, [1, 2], [10, 20]) + _group(2022, 1, [1, 2], [1, 2]))
+    df["source_issue"] = np.where(df["epi_year"] == 2021, "Vol 49 No 1", "Vol 49 No 2")
+    kept, dropped = wer_pipeline.drop_pre_baseline(df)
+    assert set(kept["epi_year"]) == {2022}
+    assert dropped == [("Vol 49 No 1", "2021-W52")]
+
+
+def _row_chars(label, nums, label_x0, nums_x0):
+    """Synthetic rotated line: label chars then number tokens, at given cross-line positions."""
+    chars, pos = [], 40.0
+    for ch in label:
+        chars.append({"text": ch, "x0": label_x0, "_s": pos, "_e": pos + 4})
+        pos += 4
+    for k, n in enumerate(nums):
+        pos = 100.0 + 20 * k
+        for ch in str(n):
+            chars.append({"text": ch, "x0": nums_x0, "_s": pos, "_e": pos + 4})
+            pos += 4
+    return chars
+
+
+def _layout(n_cols):
+    from radar_lk.ingest.parse_wer import Layout
+
+    return Layout(["dengue"], ["Dengue"], [102.0 + 20 * k for k in range(n_cols)])
+
+
+def test_label_on_a_different_text_line_than_its_numbers_fails():
+    from radar_lk.ingest.parse_wer import read_rows
+
+    units = {"colombo": "Colombo", "gampaha": "Gampaha"}
+    good = [_row_chars("Colombo", [5, 50, 90, 99], 100.0, 100.4)]
+    bad = good + [_row_chars("Gampaha", [6, 60, 91, 98], 117.0, 134.0)]  # label one row off
+    nat = _row_chars("SRILANKA", [11, 110, 90, 99], 151.0, 151.0)
+    assert read_rows([[]] + good + [nat], 0, _layout(4), units)[0][0] == "Colombo"
+    with pytest.raises(ParseError, match="row_misaligned"):
+        read_rows([[]] + bad + [nat], 0, _layout(4), units)
+
+
+def test_label_without_numbers_fails():
+    from radar_lk.ingest.parse_wer import read_rows
+
+    units = {"colombo": "Colombo"}
+    lonely = [[c for c in _row_chars("Colombo", [], 100.0, 100.0)]]
+    with pytest.raises(ParseError, match="row_misaligned"):
+        read_rows([[]] + lonely, 0, _layout(4), units)
+
+
+def test_consistent_group_is_kept_untouched():
+    kept, review, errors = within_issue_split(_frame(_group(2022, 25, W25_WEEKLY, W25_CUM)))
+    assert len(kept) == 27 and review.empty and errors.empty
+    assert set(kept["note"]) == {""}
+
+
+def test_cross_week_gap_and_revised_flag_keep_the_row():
+    wk1 = _group(2024, 10, [5, 3], [100, 50])
+    wk2 = _group(2024, 11, [4, 2], [110, 52])  # D00: 100 + 4 = 104 but printed 110: revised by +6
+    df = _frame(wk1 + wk2)
+    gap = cross_week_gap(df)
+    d00 = df[(df["area"] == "D00") & (df["epi_week"] == 11)].index[0]
+    d01 = df[(df["area"] == "D01") & (df["epi_week"] == 11)].index[0]
+    assert gap[d00] == 6 and gap[d01] == 0
+    assert gap[df[df["epi_week"] == 10].index].isna().all()  # no previous week: unknown, not failed
+    clean, review, errors, _, _ = wer_pipeline.validate_wer(df)
+    assert review.empty and len(clean) == len(df)  # a revised row is NOT dropped
+    row = clean[(clean["area"] == "D00") & (clean["epi_week"] == 11)].iloc[0]
+    assert bool(row["revised"]) is True and row["revision_delta"] == 6
+    assert row["cases"] == 4  # the weekly count stays as printed in that issue
+    ok = clean[(clean["area"] == "D01") & (clean["epi_week"] == 11)].iloc[0]
+    assert bool(ok["revised"]) is False and ok["revision_delta"] == 0
+    assert clean[clean["epi_week"] == 10]["revised"].isna().all()
+
+
+def test_first_week_of_year_expects_cum_equal_weekly():
+    df = _frame(_group(2025, 1, [7, 1], [7, 3]))
+    gap = cross_week_gap(df)
+    assert gap[df[df["area"] == "D00"].index[0]] == 0
+    assert gap[df[df["area"] == "D01"].index[0]] == 2
 
 
 def test_missing_cell_group_goes_to_review_and_is_not_inferred():
-    df = _dengue_2022_case(national_cases=809, national_cum=8309)
-    df.loc[(df["epi_week"] == 25) & (df["area"] == "Kandy"), "cases"] = None
+    df = _frame(_group(2022, 25, [5, 3], [50, 30]))
+    df.loc[df["area"] == "D01", "cases"] = None
     ok, review = wer_pipeline.split_missing_cells(df)
-    assert (ok["epi_week"] == 24).all()
-    assert len(review) == 4
-    assert list(review.loc[review["area"] == "Kandy", "fail_reason"]) == ["missing_cell;"]
-    assert set(review.loc[review["area"] != "Kandy", "fail_reason"]) == {"group_has_missing_cell;"}
+    assert ok.empty and len(review) == 3
+    assert list(review.loc[review["area"] == "D01", "fail_reason"]) == ["missing_cell"]
+    assert set(review.loc[review["area"] != "D01", "fail_reason"]) == {"group_has_missing_cell"}
 
 
-def test_percentages_outside_0_100_go_to_review():
-    df = _dengue_2022_case(national_cases=809, national_cum=8309)
-    df["completeness_pct"], df["timeliness_pct"] = 100.0, 50.0
-    df.loc[df["area"] == "Kandy", "completeness_pct"] = 200.0  # e.g. Kalutara C** = 200 in Vol 52 No 23
-    passed, failed = validate(df)
-    passed, failed = wer_pipeline.flag_pct_range(passed, failed)
-    assert set(failed["area"]) == {"Kandy"} and set(failed["fail_reason"]) == {"pct_out_of_range;"}
-    assert "Kandy" not in set(passed["area"])
+def test_percentages_outside_0_100_become_nan_and_are_counted_not_rejected():
+    df = _frame(_group(2022, 25, [5, 3], [50, 30]))
+    df.loc[df["area"] == "D01", "completeness_pct"] = 200.0  # cf. Kalutara C** = 200, Vol 52 No 23
+    df.loc[df["area"] == "D00", "timeliness_pct"] = -1.0
+    clean, review, _, counts, _ = wer_pipeline.validate_wer(df)
+    assert review.empty and len(clean) == 3  # the counts are fine, so the rows stay
+    assert clean.loc[clean["area"] == "D01", "completeness_pct"].isna().all()
+    assert clean.loc[clean["area"] == "D00", "timeliness_pct"].isna().all()
+    assert counts["completeness_pct"]["rdhs_area_weeks"] == 1
+    assert counts["completeness_pct"]["values"] == [200.0]
+    assert counts["timeliness_pct"]["area_weeks"] == 1
+
+
+def _completeness_series(values, area="D00"):
+    rows = [(2022 + i // 52, i % 52 + 1, area, "dengue", 1, 1) for i in range(len(values))]
+    df = _frame(rows)
+    df["completeness_pct"] = values
+    return df
+
+
+def test_completeness_low_uses_only_past_weeks_and_own_percentile():
+    values = [100.0] * 30 + [80.0, 100.0, 100.0]
+    df = wer_pipeline.add_completeness_low(_completeness_series(values))
+    df = df.sort_values(["epi_year", "epi_week"])
+    low = df["completeness_low"].tolist()
+    assert all(pd.isna(v) for v in low[:26])  # fewer than 26 past weeks: no threshold yet
+    assert low[26:30] == [False] * 4  # 100 is not below its own past p10 (100)
+    assert low[30] == True  # noqa: E712  (80 < 100; the 80 is not in its own history)
+    assert low[31] == False  # noqa: E712
+    assert df["completeness_p10"].iloc[30] == 100.0
+
+
+def test_completeness_low_is_relative_to_each_rdhs():
+    a = _completeness_series([90.0] * 31, "A")
+    b = _completeness_series([100.0] * 30 + [90.0], "B")
+    df = wer_pipeline.add_completeness_low(pd.concat([a, b], ignore_index=True))
+    last = df[(df["epi_year"] == 2022) & (df["epi_week"] == 31)]
+    assert last.set_index("area")["completeness_low"].to_dict() == {"A": False, "B": True}
 
 
 def test_duplicate_week_keeps_the_issue_that_adds_up():
-    good = _dengue_2022_case(national_cases=809, national_cum=8309, with_prev_week=False)
+    good = _frame(_group(2022, 25, [5, 3], [50, 30], nat_weekly=8))
     bad = good.copy()
-    bad.loc[bad["area"] == NATIONAL, "cases"] = 20
+    bad.loc[bad["area"] == NATIONAL, "cases"] = 2
     good["source_file"], bad["source_file"] = "a_good.pdf", "b_bad.pdf"
     kept, log = wer_pipeline.choose_duplicates(pd.concat([good, bad], ignore_index=True))
     assert set(kept["source_file"]) == {"a_good.pdf"}
     assert log[0]["kept"] == "a_good.pdf" and log[0]["dropped"] == ["b_bad.pdf"]
+
+
+def test_week_overrides_in_config_are_settled_and_still_checked():
+    cal = load_config()["wer_calendar"]
+    ov = cal["week_overrides"]
+    assert len(ov) == 6 and all(len(o["reason"]) > 80 for o in ov.values())
+    assert not any("Vol_51_no_36" in f for f in ov)  # the unsettled one stays out
+    for o in ov.values():  # every override must itself pass the weekday check
+        expected = 0 if o["start"] >= cal["monday_weeks_from"] else 5
+        assert o["start"].weekday() == expected
+
+
+def test_weekly_column_copied_from_previous_week_is_flagged():
+    from radar_lk.ingest.validate import stale_weekly_groups
+
+    wk1 = list(range(5, 31))  # 26 non-zero districts
+    cum1 = [10 * w for w in wk1]
+    df = _frame(
+        _group(2026, 25, wk1, cum1)
+        + _group(2026, 26, wk1, [c + w for c, w in zip(cum1, wk1, strict=True)])
+    )
+    s = stale_weekly_groups(df)
+    assert list(zip(s["epi_week"], s["disease"], s["scope"], strict=True)) == [
+        (26, "dengue", "whole issue")
+    ]
+    clean, review, _, _, stale = wer_pipeline.validate_wer(df)
+    assert set(review.loc[review["epi_week"] == 26, "fail_reason"]) == {"stale_weekly_copy"}
+    assert (clean["epi_week"] == 25).all() and len(stale) == 1
+
+
+def test_ordinary_week_to_week_change_is_not_flagged():
+    from radar_lk.ingest.validate import stale_weekly_groups
+
+    wk1 = list(range(5, 31))
+    wk2 = [w + (i % 3) - 1 for i, w in enumerate(wk1)]  # about a third repeat, as in real data
+    cum1 = [10 * w for w in wk1]
+    df = _frame(
+        _group(2026, 25, wk1, cum1)
+        + _group(2026, 26, wk2, [c + w for c, w in zip(cum1, wk2, strict=True)])
+    )
+    assert stale_weekly_groups(df).empty
+
+
+def _weeks_of(vectors, start_week=10):
+    rows = []
+    cum = [0] * len(vectors[0])
+    for k, v in enumerate(vectors):
+        cum = [c + x for c, x in zip(cum, v, strict=True)]
+        rows += _group(2026, start_week + k, v, cum)
+    return _frame(rows)
+
+
+def test_weekly_column_printed_against_the_wrong_rows_is_flagged():
+    from radar_lk.ingest.validate import scrambled_weekly_groups
+
+    base = [
+        300,
+        180,
+        110,
+        50,
+        17,
+        6,
+        89,
+        35,
+        112,
+        22,
+        3,
+        2,
+        4,
+        5,
+        51,
+        9,
+        20,
+        31,
+        15,
+        13,
+        8,
+        13,
+        10,
+        91,
+        44,
+        20,
+    ]
+    noisy = [b + (i % 3) for i, b in enumerate(base)]
+    scrambled = base[13:] + base[:13]  # same values, wrong rows: sums still add up
+    df = _weeks_of([base, noisy, scrambled])
+    s = scrambled_weekly_groups(df)
+    assert list(zip(s["epi_week"], s["disease"], strict=True)) == [(12, "dengue")]
+    assert s["rho"].iloc[0] < 0.3
+    clean, review, _, _, flagged = wer_pipeline.validate_wer(df)
+    assert set(review.loc[review["epi_week"] == 12, "fail_reason"]) == {"scrambled_weekly_column"}
+    assert set(clean["epi_week"]) == {10, 11}
+
+
+def test_ordinary_rise_does_not_look_scrambled():
+    from radar_lk.ingest.validate import scrambled_weekly_groups
+
+    base = [
+        300,
+        180,
+        110,
+        50,
+        17,
+        6,
+        89,
+        35,
+        112,
+        22,
+        3,
+        2,
+        4,
+        5,
+        51,
+        9,
+        20,
+        31,
+        15,
+        13,
+        8,
+        13,
+        10,
+        91,
+        44,
+        20,
+    ]
+    noisy = [b + (i % 3) for i, b in enumerate(base)]
+    outbreak = [b * 3 if i in (4, 5, 6) else b for i, b in enumerate(base)]  # a real local rise
+    assert scrambled_weekly_groups(_weeks_of([base, noisy, outbreak])).empty

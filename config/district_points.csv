@@ -1,27 +1,27 @@
-rdhs,town,lat,lon,note
-Colombo,Colombo,6.9271,79.8612,approximate: district capital town used as a stand-in for the district centroid
-Gampaha,Gampaha,7.0917,79.9999,approximate: district capital town used as a stand-in for the district centroid
-Kalutara,Kalutara,6.5854,79.9607,approximate: district capital town used as a stand-in for the district centroid
-Kandy,Kandy,7.2906,80.6337,approximate: district capital town used as a stand-in for the district centroid
-Matale,Matale,7.4675,80.6234,approximate: district capital town used as a stand-in for the district centroid
-Nuwara Eliya,Nuwara Eliya,6.9497,80.7891,approximate: district capital town used as a stand-in for the district centroid
-Galle,Galle,6.0535,80.2210,approximate: district capital town used as a stand-in for the district centroid
-Hambantota,Hambantota,6.1241,81.1185,approximate: district capital town used as a stand-in for the district centroid
-Matara,Matara,5.9549,80.5550,approximate: district capital town used as a stand-in for the district centroid
-Jaffna,Jaffna,9.6615,80.0255,approximate: district capital town used as a stand-in for the district centroid
-Kilinochchi,Kilinochchi,9.3803,80.3770,approximate: district capital town used as a stand-in for the district centroid
-Mannar,Mannar,8.9810,79.9044,approximate: district capital town used as a stand-in for the district centroid
-Vavuniya,Vavuniya,8.7514,80.4971,approximate: district capital town used as a stand-in for the district centroid
-Mullaitivu,Mullaitivu,9.2671,80.8142,approximate: district capital town used as a stand-in for the district centroid
-Batticaloa,Batticaloa,7.7102,81.6924,approximate: district capital town used as a stand-in for the district centroid
-Ampara,Ampara,7.2975,81.6820,approximate: district capital town used as a stand-in for the district centroid
-Trincomalee,Trincomalee,8.5874,81.2152,approximate: district capital town used as a stand-in for the district centroid
-Kurunegala,Kurunegala,7.4863,80.3647,approximate: district capital town used as a stand-in for the district centroid
-Puttalam,Puttalam,8.0362,79.8283,approximate: district capital town used as a stand-in for the district centroid
-Anuradhapura,Anuradhapura,8.3114,80.4037,approximate: district capital town used as a stand-in for the district centroid
-Polonnaruwa,Polonnaruwa,7.9403,81.0188,approximate: district capital town used as a stand-in for the district centroid
-Badulla,Badulla,6.9934,81.0550,approximate: district capital town used as a stand-in for the district centroid
-Monaragala,Monaragala,6.8728,81.3507,approximate: district capital town used as a stand-in for the district centroid
-Ratnapura,Ratnapura,6.6828,80.3992,approximate: district capital town used as a stand-in for the district centroid
-Kegalle,Kegalle,7.2513,80.3464,approximate: district capital town used as a stand-in for the district centroid
-Kalmunai,Kalmunai,7.4167,81.8167,approximate: Kalmunai town (the RDHS is a sub-area of Ampara district); stand-in for the RDHS centroid
+rdhs,lat,lon,point_source,adm2_pcode,town,town_lat,town_lon,centroid_lat,centroid_lon,km_town_to_centroid,note
+Colombo,6.8698,80.0185,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK11,Colombo,6.9271,79.8612,6.8698,80.0185,18.5,
+Gampaha,7.1241,80.0145,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK12,Gampaha,7.0917,79.9999,7.1241,80.0145,3.9,
+Kalutara,6.5771,80.1275,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK13,Kalutara,6.5854,79.9607,6.5771,80.1275,18.4,
+Kandy,7.273,80.709,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK21,Kandy,7.2906,80.6337,7.273,80.709,8.5,
+Matale,7.6675,80.7311,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK22,Matale,7.4675,80.6234,7.6675,80.7311,25.2,
+Nuwara Eliya,6.9744,80.7111,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK23,Nuwara Eliya,6.9497,80.7891,6.9744,80.7111,9.0,
+Galle,6.2228,80.2521,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK31,Galle,6.0535,80.221,6.2228,80.2521,19.1,
+Hambantota,6.2597,81.098,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK33,Hambantota,6.1241,81.1185,6.2597,81.098,15.2,
+Matara,6.1427,80.5399,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK32,Matara,5.9549,80.555,6.1427,80.5399,20.9,
+Jaffna,9.6876,80.1163,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK41,Jaffna,9.6615,80.0255,9.6876,80.1163,10.4,
+Kilinochchi,9.4212,80.3104,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK45,Kilinochchi,9.3803,80.377,9.4212,80.3104,8.6,
+Mannar,8.8777,80.0894,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK42,Mannar,8.981,79.9044,8.8777,80.0894,23.3,
+Vavuniya,8.8534,80.4711,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK43,Vavuniya,8.7514,80.4971,8.8534,80.4711,11.7,
+Mullaitivu,9.1692,80.5509,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK44,Mullaitivu,9.2671,80.8142,9.1692,80.5509,30.9,
+Batticaloa,7.7931,81.4861,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK51,Batticaloa,7.7102,81.6924,7.7931,81.4861,24.5,
+Ampara,7.2346,81.5537,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK52,Ampara,7.2975,81.682,7.2346,81.5537,15.8,
+Trincomalee,8.5549,81.0922,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK53,Trincomalee,8.5874,81.2152,8.5549,81.0922,14.0,
+Kurunegala,7.6646,80.2367,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK61,Kurunegala,7.4863,80.3647,7.6646,80.2367,24.3,
+Puttalam,7.9742,79.9136,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK62,Puttalam,8.0362,79.8283,7.9742,79.9136,11.7,
+Anuradhapura,8.3917,80.5131,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK71,Anuradhapura,8.3114,80.4037,8.3917,80.5131,15.0,
+Polonnaruwa,7.9912,81.0273,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK72,Polonnaruwa,7.9403,81.0188,7.9912,81.0273,5.7,
+Badulla,7.0744,81.0448,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK81,Badulla,6.9934,81.055,7.0744,81.0448,9.1,
+Monaragala,6.7873,81.3037,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK82,Monaragala,6.8728,81.3507,6.7873,81.3037,10.8,
+Ratnapura,6.5869,80.5663,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK91,Ratnapura,6.6828,80.3992,6.5869,80.5663,21.3,
+Kegalle,7.1041,80.3426,"admin-2 centroid (HDX COD-AB, EPSG:5235)",LK92,Kegalle,7.2513,80.3464,7.1041,80.3426,16.4,
+Kalmunai,7.4167,81.8167,town point (not an admin district),,Kalmunai,7.4167,81.8167,,,,Kalmunai RDHS is part of Ampara district; Kalmunai town used

@@ -19,8 +19,14 @@ sources:
   ndcu_weekly:
     name: "NDCU Weekly Dengue Update"
     base_url: "https://www.dengue.health.gov.lk"
-    listing_urls: []            # CONFIRM
-    pdf_link_regex: "(?i)\\.pdf$"
+    # "Weekly Report" archive linked from the homepage (3 pages, 20 per page). Checked 2 Nov 2026:
+    # it holds only 2026 Weeks 1-43 (the site was rebuilt in 2026); the publications and
+    # daily-report pages hold nothing older. robots.txt allows these paths.
+    listing_urls:
+      - https://www.dengue.health.gov.lk/weekly-report/
+      - https://www.dengue.health.gov.lk/weekly-report/page/2/
+      - https://www.dengue.health.gov.lk/weekly-report/page/3/
+    pdf_link_regex: "(?i)/wp-content/uploads/.*weekly-dengue-update.*\\.pdf$"
     attribution: "Source: National Dengue Control Unit, Ministry of Health, Sri Lanka"
 
   ndcu_daily:
@@ -92,6 +98,9 @@ rdhs_label_variants:
   "Anuradhapu": Anuradhapura
   "Kalmune": Kalmunai            # 2022: text layer ends one letter short (confirm in parser)
   "Puttlam": Puttalam            # 2026 misspelling in Table 1 (row position confirms)
+  "Hambanthota": Hambantota        # NDCU Week 1 district heading
+  "Rathnapura": Ratnapura          # NDCU Week 1 district heading
+  "Vavuniy": Vavuniya             # NDCU Weeks 28-29 district heading is cut short
 national_total_label: "SRILANKA"  # printed "SRI LANKA"; compare after stripping spaces
 
 # WER calendar facts used to sanity-check the week printed in Table 1 (see docs/LAYOUTS.md).
@@ -103,12 +112,69 @@ wer_calendar:
   # WER's own "(Nth Week)" equals the canonical (Thursday-rule) week, except 2021, which WER
   # numbered one ahead because its week 1 began Sat 26 Dec 2020.
   printed_week_offset: {2021: 1}
-  # User-approved corrections for source typos in the printed week, keyed by file as in
-  # data/raw/manifest.csv. Empty until approved. Example:
-  #   "wer/en_6684d253a04fc_Vol_51_no_24-english.pdf": {start: 2024-06-01}   # printed "May"
-  week_overrides: {}
+  # Corrections for source typos in the printed week, keyed by file as in data/raw/manifest.csv.
+  # An entry exists ONLY where all of these agree on one answer: the day numbers / weekday of the
+  # printed range, the printed "(Nth Week)", the front-page range (table = front page - 7 days),
+  # the previous and next issues' weeks, and the cumulative values (cum chains to the neighbours
+  # at the normal ~95-100% of cells; year-start weeks have cum == weekly). `start` replaces the
+  # printed text; parse_wer still checks weekday and printed week number against it.
+  # NOT settled, deliberately absent: Vol 51 No 36 (en_66ff7279f1888_...): its printed dates repeat
+  # Vol 51 No 35 and its cumulatives chain less well (73% to the previous week, 90% monotone).
+  week_overrides:
+    "wer/en_64100cf21b53d_Vol_50_no_02-english_1.pdf":
+      start: 2022-12-31
+      reason: >-
+        printed "31st- 06th Jan 2022" but the year is 2023: front page 7-13 Jan 2023, previous issue
+        24-30 Dec 2022 (W52), next 7-13 Jan 2023 (W02), printed "(1st Week)", Sat start, cum == weekly
+        in 100% of district cells (year-start week) and cum chains to next week in 100%.
+    "wer/en_658bfc0e47143_Vol_50_no_41-english.pdf":
+      start: 2023-09-30
+      reason: >-
+        printed "30th- 06th Sep 2023" but 30 Sep-6 Oct: front page 7-13 Oct 2023, previous 23-29 Sep
+        (W39), next 7-13 Oct (W41), printed "(40th Week)", Sat start, cum chains 98%/97%, monotone 99.7%.
+    "wer/en_6684d253a04fc_Vol_51_no_24-english.pdf":
+      start: 2024-06-01
+      reason: >-
+        printed "01st - 07th May 2024" (a Wednesday start) but 1-7 June: front page 8-14 June 2024,
+        previous 25-31 May (W22), next 8-14 June (W24), printed "(23rd Week)", cum chains 99%/97%,
+        monotone 100%.
+    "wer/en_69db13e10917e_Vol_53_no_02-english.pdf":
+      start: 2025-12-29
+      reason: >-
+        printed "29th - 04th Jan 2025" but the year is 2026: front page 5-11 Jan 2026, previous issue
+        20-26 Dec 2025 (Sat-Fri), first Monday-Sunday week after the announced switch, printed
+        "(01st Week)", cum == weekly in 93% of cells (same as other year-start weeks), chains to next 93%.
+    "wer/en_69db15872f0bb_Vol_53_no_03-english.pdf":
+      start: 2026-01-05
+      reason: >-
+        printed "05th - 11th Jan 2025" but the year is 2026: front page 12-18 Jan 2026, previous
+        29 Dec-4 Jan, next 12-18 Jan 2026 (W03), Monday start, printed "(02nd Week)", cum chains
+        93%/100%, monotone 97%.
+    "wer/en_6abdf20d4de58_Vol_53_no_32-english.pdf":
+      start: 2026-07-27
+      reason: >-
+        printed "26th - 02nd Aug 2026" but the Monday-Sunday week is 27 Jul-2 Aug: front page 3-9 Aug
+        2026, previous 20-26 Jul (W30), next 3-9 Aug (W32), printed "(31st Week)", cum chains
+        100%/100%, monotone 100%.
 
 thresholds:
-  completeness_min_pct: null    # set from historical distribution on day 4
-  radar_alert_quantile: 0.98
+  completeness_min_pct: null    # not used: C** is undefined, gating is relative (completeness_low)
+  radar_alert_quantile: 0.98    # NB-GLM upper bound; tightened by the backtest if the stop rule fires
   max_alert_rate: 0.10          # stop rule: >10% of district-weeks flagged
+
+# Radar (src/radar_lk/radar). Every method uses only weeks before t (no lookahead).
+radar:
+  first_year: 2022              # post-COVID baseline: 2022-W01 onwards
+  min_history_weeks: 104        # a series needs this many observed weeks to be modelled
+  min_count: 3                  # no alert below this observed count (all methods)
+  status_quo_factor: 2.0        # comparator: >= 2x the same week last year
+  ears_baseline: 7              # EARS: 7-week baseline ...
+  ears_guard: 2                 # ... ending 2 weeks before t (C2/C3)
+  ears_c2_threshold: 3.0
+  ears_c3_threshold: 2.0
+  ears_sd_floor: 1.0            # sd floor for count data (an all-zero baseline has sd 0)
+  nb_min_train_weeks: 52        # NB-GLM needs one season before its first prediction
+  nb_refit_every: 4             # weeks
+  nb_fourier_period: 52.18
+  nb_fourier_k: 2
+  nb_reweight_threshold: 2.58   # Anscombe residual above which a past week is down-weighted

@@ -25,12 +25,17 @@ Delivered as a Streamlit dashboard + a one-page weekly brief per RDHS.
   Every alert is "a signal for investigation" and shows its track record.
 - **Nothing unvalidated reaches the UI. Validation has two tiers:**
   1. `extraction_valid` (column `validated`) = passes the checks that need only the one issue: per
-     (week, disease) the 26 districts' *cumulative* counts add to the printed national cumulative;
-     no blank or unreadable count cell; completeness/timeliness in [0,100] (outside -> NaN, counted).
-     Only `extraction_valid` rows are written to `data/clean/` and may reach the dashboard; everything
-     else goes to `data/review_queue/`. If the cumulatives add up but the districts' weekly counts do
-     not add to the printed national weekly, the national weekly is a source error: keep the district
-     rows (`note=national_weekly_source_error`), queue only the national row.
+     (week, disease) the 26 districts add up to the printed national row in the weekly column, the
+     cumulative column, or both; the row's label sits on the same text line as its numbers and the
+     rows come in the expected order; the weekly column is neither a copy of the previous week's
+     (`stale_weekly_copy`) nor printed against the wrong rows (`scrambled_weekly_column`, a
+     past-only rank-correlation test); no blank or unreadable count cell; completeness/timeliness in
+     [0,100] (outside -> NaN, counted); reporting week 2022-W01 or later. Only `extraction_valid` rows
+     are written to `data/clean/` and may reach the dashboard; everything else goes to
+     `data/review_queue/`. When exactly one national column disagrees with the districts, that
+     national figure is the source error: keep the district rows
+     (`note=national_weekly_source_error` or `note=national_cumulative_source_error`) and queue only
+     the national row. When both disagree, the whole group is queued (`cum_sum_mismatch`).
   2. `revised` = the cross-week identity cum_t = cum_{t-1} + weekly_t fails. This does **not** remove a
      row: it sets `revised=True` and `revision_delta = cum_t - (cum_{t-1} + weekly_t)` (empty if the
      previous week is missing). Weekly counts are kept **as first printed** in that issue (what a

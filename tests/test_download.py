@@ -19,20 +19,27 @@ PDF_RE = r"(?i)/storage/post/pdfs/.*\.pdf$"
 
 
 def _row(title, week, dates, name):
-    return f"""<li class="product"><div class="product-name"><p title="{title}">{title[:12]}...</p></div>
+    return f"""<li class="product"><div class="product-name">
+<p title="{title}">{title[:12]}...</p></div>
 <div class="product-name"><p>Week {week}</p></div><div class="product-name"><p>{dates}</p></div>
 <a href="https://www.epid.gov.lk/storage/post/pdfs/{name}" class="btn">Download</a></li>"""
 
 
-LISTING = "<ul>" + "".join(
-    [
-        _row("Topic A 2025", 34, "2026.08.15 - 2026.08.21", "en_6ac49_Vol_53_no_34-english.pdf"),
-        _row("Topic B", 1, "2025.12.27 - 2026.01.02", "en_6aa11_Vol_52_no_52-english.pdf"),
-        _row("Survey 2022", 46, "2020.11.07 - 2020.11.13", "vol_47_no_46-english_1.pdf"),
-        _row("Mystery", 7, "", "en_63ec87e11b430_WER.pdf"),
-        _row("Topic C", 5, "2023.02.04 - 2023.02.10", "en_7bb22_WER-sinhala.pdf"),
-    ]
-) + "</ul>"
+LISTING = (
+    "<ul>"
+    + "".join(
+        [
+            _row(
+                "Topic A 2025", 34, "2026.08.15 - 2026.08.21", "en_6ac49_Vol_53_no_34-english.pdf"
+            ),
+            _row("Topic B", 1, "2025.12.27 - 2026.01.02", "en_6aa11_Vol_52_no_52-english.pdf"),
+            _row("Survey 2022", 46, "2020.11.07 - 2020.11.13", "vol_47_no_46-english_1.pdf"),
+            _row("Mystery", 7, "", "en_63ec87e11b430_WER.pdf"),
+            _row("Topic C", 5, "2023.02.04 - 2023.02.10", "en_7bb22_WER-sinhala.pdf"),
+        ]
+    )
+    + "</ul>"
+)
 SRC = {"pdf_link_regex": PDF_RE, "english_only_regex": r"(?i)(english|^en_|/en_)"}
 
 
@@ -44,9 +51,9 @@ def test_find_pdf_links():
 
 def test_year_filter_from_volume():
     yrs = parse_years("2022-2026")
-    assert year_filter("vol_53_no_34-english.pdf", yrs)       # 2026
-    assert not year_filter("vol_48_no_01-english.pdf", yrs)   # 2021
-    assert year_filter("en_abc123_report.pdf", yrs)           # unknown year: keep
+    assert year_filter("vol_53_no_34-english.pdf", yrs)  # 2026
+    assert not year_filter("vol_48_no_01-english.pdf", yrs)  # 2021
+    assert year_filter("en_abc123_report.pdf", yrs)  # unknown year: keep
 
 
 def test_anchor_text_context_is_the_row_only():
@@ -66,7 +73,9 @@ def test_year_from_date_range_when_url_has_no_year():
 
 def test_title_year_is_not_evidence():
     # "2025" in the title must not outvote the dates; only dates and "Vol NN" count
-    best, ev = link_years("en_x_WER.pdf", "Immunization survey 2025 Week 46 2020.11.07 - 2020.11.13")
+    best, ev = link_years(
+        "en_x_WER.pdf", "Immunization survey 2025 Week 46 2020.11.07 - 2020.11.13"
+    )
     assert ev == {2020} and best == 2020
 
 

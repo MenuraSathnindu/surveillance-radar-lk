@@ -8,14 +8,16 @@ def make(rows):
     return pd.DataFrame(rows, columns=cols)
 
 
-GOOD = make([
-    (2026, 1, "Colombo", "dengue", 10, 10),
-    (2026, 1, "Gampaha", "dengue", 5, 5),
-    (2026, 1, NATIONAL, "dengue", 15, 15),
-    (2026, 2, "Colombo", "dengue", 7, 17),
-    (2026, 2, "Gampaha", "dengue", 3, 8),
-    (2026, 2, NATIONAL, "dengue", 10, 25),
-])
+GOOD = make(
+    [
+        (2026, 1, "Colombo", "dengue", 10, 10),
+        (2026, 1, "Gampaha", "dengue", 5, 5),
+        (2026, 1, NATIONAL, "dengue", 15, 15),
+        (2026, 2, "Colombo", "dengue", 7, 17),
+        (2026, 2, "Gampaha", "dengue", 3, 8),
+        (2026, 2, NATIONAL, "dengue", 10, 25),
+    ]
+)
 
 
 def test_sum_check_passes():

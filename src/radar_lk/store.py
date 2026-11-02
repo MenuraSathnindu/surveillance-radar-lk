@@ -7,10 +7,21 @@ import pandas as pd
 from radar_lk import CLEAN_DIR, REVIEW_DIR
 
 TIDY_COLUMNS = [
-    "week_start", "week_end", "epi_year", "epi_week",
-    "area_level", "area", "disease",
-    "cases", "cum_cases", "completeness_pct", "timeliness_pct",
-    "source_file", "source_issue", "extracted_at", "validated",
+    "week_start",
+    "week_end",
+    "epi_year",
+    "epi_week",
+    "area_level",
+    "area",
+    "disease",
+    "cases",
+    "cum_cases",
+    "completeness_pct",
+    "timeliness_pct",
+    "source_file",
+    "source_issue",
+    "extracted_at",
+    "validated",
 ]
 
 DB_PATH = CLEAN_DIR / "radar.duckdb"

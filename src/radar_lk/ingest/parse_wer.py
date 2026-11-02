@@ -13,7 +13,7 @@ Rules (see docs/LAYOUTS.md and CLAUDE.md):
 - No PDF page contributes numbers unless the whole issue parsed.
 
 Usage:
-    python -m radar_lk.ingest.parse_wer            # all PDFs in data/raw/wer -> data/clean, review queue
+    python -m radar_lk.ingest.parse_wer   # data/raw/wer/*.pdf -> data/clean, data/review_queue
 """
 
 from __future__ import annotations
@@ -36,9 +36,15 @@ GAP = 1.5  # pt; larger gap between consecutive characters of a line starts a ne
 RUN_GAP = 5.0  # pt; header characters further apart than this belong to different words/cells
 LINE_TOL = 3.0  # pt; characters whose x0 differ by less than this are on the same text line
 LABEL_MARGIN = 10.0  # pt; tokens centred left of (first column label - this) are the row label
+ROW_ALIGN_TOL = 4.0  # pt; max label-to-numbers offset across the line (observed max 2.0)
+ROW_MIN_GAP = 8.0  # pt; min distance between consecutive rows (observed min 12.5)
 PCT = re.compile(r"\d+(?:\.\d+)?%?")  # T*/C** cells: "97", "8%", "5.5"
-MONTHS = {m: i for i, m in enumerate(
-    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+MONTHS = {
+    m: i
+    for i, m in enumerate(
+        ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1
+    )
+}
 
 TITLE = re.compile(
     r"Table\s*1\s*:\s*(?P<name>[^()]{0,90}?)\s*reported\s+by\s+Medical\s+Officers\s+of\s+Health"
@@ -78,6 +84,7 @@ def norm(s: str) -> str:
 
 # ---------------------------------------------------------------- page reading
 
+
 def _rot(c) -> bool:
     m = c["matrix"]
     return abs(m[0]) < 0.1 and m[1] > 0.9
@@ -109,7 +116,9 @@ def read_lines(page) -> list[list[dict]]:
     chars = sorted((c for c in page.chars if _rot(c)), key=lambda c: c["x0"])
     if len(chars) < 500:
         clockwise = sum(1 for c in page.chars if c["matrix"][1] < -0.9)
-        raise ParseError("orientation", f"{len(chars)} rotated chars; {clockwise} rotated the other way")
+        raise ParseError(
+            "orientation", f"{len(chars)} rotated chars; {clockwise} rotated the other way"
+        )
     lines: list[list[dict]] = []
     anchor = None
     for c in chars:
@@ -159,6 +168,7 @@ def line_text(line: list[dict]) -> str:
 
 # ---------------------------------------------------------------- locating Table 1
 
+
 def find_table_page(pdf) -> tuple[int, re.Match, str] | None:
     """(page index, title match, upright text) of the page holding Table 1, by content.
 
@@ -199,34 +209,35 @@ def parse_week(week_text: str) -> tuple[date, date]:
     return start, end
 
 
-def check_week(start: date, end: date, printed: int, cal: dict, overridden: bool = False) -> None:
+def check_week(start: date, end: date, printed: int, cal: dict) -> None:
     """Sanity-check the week read from the table title; a source typo must fail, not mis-file.
 
     1. The block must start on the weekday the WER used at that time (Sat, then Mon).
     2. The printed "(Nth Week)" must equal the canonical week (plus WER's 2021 offset).
     A wrong month or year in the printed range still forms a valid 7-day block, so only these
-    cross-checks can catch it. Overridden weeks skip check 2 (the override is the evidence).
+    cross-checks can catch it. Both checks also apply to user-approved overrides.
     """
     monday_from = cal.get("monday_weeks_from")
     expected = 0 if monday_from and start >= monday_from else 5
     if start.weekday() != expected:
         raise ParseError(
             "week_weekday",
-            f"{start:%a %Y-%m-%d} to {end:%Y-%m-%d} starts on {start:%A}, WER weeks then started on "
+            f"{start:%a %Y-%m-%d} to {end:%Y-%m-%d} starts on {start:%A}, WER weeks then started "
+            f"on "
             f"{'Monday' if expected == 0 else 'Saturday'}",
         )
-    if overridden:
-        return
     epi_year, epi_week = block_from_range(start, end)
     offset = (cal.get("printed_week_offset") or {}).get(epi_year, 0)
     if printed != epi_week + offset:
         raise ParseError(
             "week_number_mismatch",
-            f"printed week {printed} != canonical {epi_year}-W{epi_week:02d} (+{offset}) for {start}..{end}",
+            f"printed week {printed} != canonical {epi_year}-W{epi_week:02d} (+{offset}) for "
+            f"{start}..{end}",
         )
 
 
 # ---------------------------------------------------------------- header + rows
+
 
 @dataclass
 class Layout:
@@ -239,11 +250,18 @@ def _centre(c) -> float:
     return (c["_s"] + c["_e"]) / 2
 
 
-def read_header(lines: list[list[dict]], alias_to_id: dict[str, str], order: list[str]) -> tuple[Layout, int]:
-    """Locate the RDHS/WRCD header and its A/B/T*/C** sub-header; return layout + index of sub line."""
+def read_header(
+    lines: list[list[dict]], alias_to_id: dict[str, str], order: list[str]
+) -> tuple[Layout, int]:
+    """Locate the RDHS/WRCD header and its A/B/T*/C** sub-header; return layout + sub-line index."""
+
     def is_header(ln) -> bool:
         toks = tokens(ln)
-        return bool(toks) and norm(toks[0].text) == "rdhs" and any(norm(t.text) == "wrcd" for t in toks)
+        return (
+            bool(toks)
+            and norm(toks[0].text) == "rdhs"
+            and any(norm(t.text) == "wrcd" for t in toks)
+        )
 
     i = next((k for k, ln in enumerate(lines) if is_header(ln)), None)
     if i is None:
@@ -308,6 +326,7 @@ def read_rows(lines: list[list[dict]], sub_idx: int, layout: Layout, units: dict
     ncol = len(layout.label_c)
     label_end = layout.label_c[0] - LABEL_MARGIN
     out = []
+    last_x = 0.0
     for ln in lines[sub_idx + 1 :]:
         toks = tokens(ln)
         if not toks:
@@ -319,6 +338,21 @@ def read_rows(lines: list[list[dict]], sub_idx: int, layout: Layout, units: dict
             continue
         if not label:
             raise ParseError("row_label", f"row without label: {[t.text for t in toks][:6]}")
+        if not nums:
+            raise ParseError("row_misaligned", f"label {label!r} has no numbers on its text line")
+        # the label must sit on the same text line as its numbers (measured: <= 2.0 pt apart in
+        # all 244 issues, rows >= 12.5 pt apart), so a label paired with a neighbouring row fails
+        lab_x = [c["x0"] for c in ln if c["text"].strip() and (c["_s"] + c["_e"]) / 2 < label_end]
+        num_x = [c["x0"] for c in ln if c["text"].strip() and (c["_s"] + c["_e"]) / 2 >= label_end]
+        offset = sum(lab_x) / len(lab_x) - sum(num_x) / len(num_x)
+        if abs(offset) > ROW_ALIGN_TOL:
+            raise ParseError("row_misaligned", f"{label!r} sits {offset:+.1f} pt off its numbers")
+        row_x = sum(num_x) / len(num_x)
+        if out and row_x - last_x < ROW_MIN_GAP:
+            raise ParseError(
+                "row_misaligned", f"{label!r} is {row_x - last_x:.1f} pt below the row above"
+            )
+        last_x = row_x
         nl = norm(label)
         if nl == "srilanka":
             area = NATIONAL
@@ -336,8 +370,11 @@ def read_rows(lines: list[list[dict]], sub_idx: int, layout: Layout, units: dict
             for t in nums:
                 j = min(range(ncol), key=lambda q: abs(t.c - layout.label_c[q]))
                 if cells[j] is not None:
-                    raise ParseError("row_ambiguous", f"{label}: {len(nums)} tokens for {ncol} columns, "
-                                                      f"two in column {j}: {cells[j]!r}, {t.text!r}")
+                    raise ParseError(
+                        "row_ambiguous",
+                        f"{label}: {len(nums)} tokens for {ncol} columns, "
+                        f"two in column {j}: {cells[j]!r}, {t.text!r}",
+                    )
                 cells[j] = t.text
         vals: list[int | float | None] = []
         stats = {"blank": 0, "unreadable": 0, "pct_format": 0}
@@ -377,6 +414,7 @@ def footnote(lines: list[list[dict]]) -> str:
 
 # ---------------------------------------------------------------- one issue
 
+
 def _issue_label(text: str, p1_text: str, name: str) -> str:
     for t in (text, p1_text):
         m = VOLNO.search(t)
@@ -407,20 +445,26 @@ def parse_issue(path: str | Path, cfg: dict | None = None) -> IssueResult:
         with pdfplumber.open(path) as pdf:
             found = find_table_page(pdf)
             if not found:
-                res.status, res.reason = "no_table", "no page with a Table 1 'Medical Officers of Health' title"
+                res.status, res.reason = (
+                    "no_table",
+                    "no page with a Table 1 'Medical Officers of Health' title",
+                )
                 return res
             pi, title, text = found
             res.page = pi + 1
             p1 = upright_text(pdf.pages[0]) if pi != 0 else text
             res.source_issue = _issue_label(text, p1, path.name)
-            start, end = parse_week(title["week"])
             cal = cfg.get("wer_calendar", {})
             override = (cal.get("week_overrides") or {}).get(res.file)
             if override:
+                start = end = override["start"]  # the printed text is what the override replaces
+            else:
+                start, end = parse_week(title["week"])
+            if override:
                 start = override["start"]
                 end = start + timedelta(days=6)
-                res.meta["week_override"] = f"{override['start']}"
-            check_week(start, end, int(title["wk"]), cal, bool(override))
+                res.meta["week_override"] = f"{override['start']}: {override.get('reason', '')}"
+            check_week(start, end, int(title["wk"]), cal)
             epi_year, epi_week = block_from_range(start, end)
             lines = read_lines(pdf.pages[pi])
             layout, sub_idx = read_header(lines, alias_to_id, order)
@@ -450,22 +494,41 @@ def parse_issue(path: str | Path, cfg: dict | None = None) -> IssueResult:
         if t_pct is None or c_pct is None or any(v is None for v in vals[: 2 * n]):
             cell_problems.append(area)
         for k, dis in enumerate(layout.diseases):
-            res.rows.append({
-                "week_start": start, "week_end": end, "epi_year": epi_year, "epi_week": epi_week,
-                "area_level": "national" if area == NATIONAL else "rdhs",
-                "area": area, "disease": dis,
-                "cases": vals[2 * k], "cum_cases": vals[2 * k + 1],
-                "completeness_pct": c_pct, "timeliness_pct": t_pct,
-                "source_file": res.file, "source_issue": res.source_issue,
-                "extracted_at": now, "validated": False,
-                "printed_week": int(title["wk"]), "page": res.page,
-            })
+            res.rows.append(
+                {
+                    "week_start": start,
+                    "week_end": end,
+                    "epi_year": epi_year,
+                    "epi_week": epi_week,
+                    "area_level": "national" if area == NATIONAL else "rdhs",
+                    "area": area,
+                    "disease": dis,
+                    "cases": vals[2 * k],
+                    "cum_cases": vals[2 * k + 1],
+                    "completeness_pct": c_pct,
+                    "timeliness_pct": t_pct,
+                    "source_file": res.file,
+                    "source_issue": res.source_issue,
+                    "extracted_at": now,
+                    "validated": False,
+                    "printed_week": int(title["wk"]),
+                    "page": res.page,
+                }
+            )
     res.status = "ok"
     res.meta.update(
-        title=title["name"].strip(), week_text=re.sub(r"\s+", " ", title["week"]).strip(),
-        n_diseases=n, diseases=layout.diseases, header_names=layout.header_names,
-        cell_stats=cell_stats, rows_with_cell_problems=cell_problems, footnote=foot,
-        epi_year=epi_year, epi_week=epi_week, start=start, end=end,
+        title=title["name"].strip(),
+        week_text=re.sub(r"\s+", " ", title["week"]).strip(),
+        n_diseases=n,
+        diseases=layout.diseases,
+        header_names=layout.header_names,
+        cell_stats=cell_stats,
+        rows_with_cell_problems=cell_problems,
+        footnote=foot,
+        epi_year=epi_year,
+        epi_week=epi_week,
+        start=start,
+        end=end,
     )
     return res
 

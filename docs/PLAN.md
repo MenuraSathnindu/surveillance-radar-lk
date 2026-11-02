@@ -16,7 +16,8 @@ If the site goes down again: drop PDFs into `data/raw/wer/` and run
 | Proposal | Now | Restore if time allows |
 |---|---|---|
 | WER 2016–2026 | **WER 2022–2026 first** (≈240 issues) | Extend back to 2016 |
-| CHIRPS + ERA5 per MOH | **Open-Meteo daily, district centroids** | CHIRPS per MOH polygon |
+| CHIRPS + ERA5 per MOH | **Open-Meteo daily at 26 district-capital points** (`data/clean/weather.parquet`, done) | CHIRPS per MOH polygon |
+| Dengue MOH high-risk outlook | **NO-GO (2 Nov): NDCU archive has only 2026 W1-43.** District-level **leptospirosis outlook** from WER + weather | Dengue MOH outlook if older NDCU lists are found (see `docs/NDCU_FEASIBILITY.md`) |
 | Farrington via R + EARS + NB-GLM | **EARS C1/C2/C3 + NB-GLM (pure Python)** | Farrington Flexible via rpy2 |
 | Brief by email | **Downloadable brief (PDF/Markdown)** | Email |
 | LLM phrasing | **Template only** | Optional LLM phrasing |
@@ -25,8 +26,8 @@ If the site goes down again: drop PDFs into `data/raw/wer/` and run
 | Day | Goal | Done when |
 |---|---|---|
 | **Mon 2 Nov** | Download WER 2022–2026; inspect 3 layouts (2022, 2024, 2026) → `docs/LAYOUTS.md`; start the Table 1 parser | PDFs on disk + manifest; layout notes written; parser started |
-| **Tue 3** | WER Table 1 parser + validation (sum, cumulative), completeness/timeliness columns; NDCU check (Table 1 + 2, **timeboxed**) | 2022–2026 in clean Parquet, ≥95% of issues pass checks. **Decision:** MOH flags reliable → dengue outlook; else leptospirosis fallback |
-| **Wed 4** | Radar: EARS + NB-GLM, percentile + expected range, completeness gating, backtest 2023–2026 vs "2× same week last year". Outlook: persistence, logistic, LightGBM, MAPIE conformal, rolling-origin backtest | Backtest tables: lead time, false alerts / 100 district-weeks; Brier, precision, recall vs persistence, interval coverage |
+| **Tue 3** | Hand-check the 40 cells + the 5 issues with odd cells; start radar baselines on `data/clean/wer.parquet` (use `completeness_low`, first-printed weekly counts) | Hand-check sheet filled; baselines run. **Decision taken early (Mon): leptospirosis fallback** |
+| **Wed 4** | Radar: EARS + NB-GLM, percentile + expected range, completeness gating, backtest 2023–2026 vs "2× same week last year". Outlook (district-level leptospirosis, WER + weather lags): persistence, logistic, LightGBM, MAPIE conformal, rolling-origin backtest | Backtest tables: lead time, false alerts / 100 district-weeks; Brier, precision, recall vs persistence, interval coverage |
 | **Thu 5** | Streamlit (This week, Map, Outlook, Track record), weekly brief template, technical report, two-page summary, 3-min demo video, hand-check tables, **submit by 23:59** | Submitted |
 
 ## Stop rules (from proposal section 9)
@@ -35,9 +36,19 @@ If the site goes down again: drop PDFs into `data/raw/wer/` and run
 - Radar flags >10% of district-weeks → tighten thresholds or restrict diseases.
 
 ## Status
-- [x] Mon 2 Nov — downloader fixed, 244 PDFs downloaded, layouts documented, WER parser + validation
-  written (`python -m radar_lk.ingest.parse_wer`), extraction report and hand-check pack generated
-- [ ] Tue 3 — **decision needed first:** validated rate is 90.6% vs the 95% target (see
-  `docs/EXTRACTION_REPORT.md` section 4 and "What-if"); then hand-check, NDCU check, outlook decision
-- [ ] Wed 4 — radar + outlook + backtests
-- [ ] Thu 5 — dashboard, brief, report, video, submit by 23:59
+- [x] Mon 2 Nov — downloader fixed, 244 WER PDFs downloaded, layouts documented. WER parser +
+  two-tier validation (`python -m radar_lk.ingest.parse_wer`): 96.2% extraction_valid, 5.4% revised;
+  6 week-typo overrides; extraction report and hand-check pack written
+- [x] Mon 2 Nov — NDCU: 43 weekly PDFs (2026 W1-43) downloaded and parsed (`parse_ndcu`); **NO-GO**,
+  history is 43 weeks, not 100 (`docs/NDCU_FEASIBILITY.md`) → leptospirosis outlook
+- [x] Mon 2 Nov — weather: 26 points x 303 weeks, 2021-01 to 2026-10 (`python -m radar_lk.ingest.weather`)
+- [x] Mon 2 Nov (late) — data integrity: row-alignment check (0 failures), PyMuPDF cross-extraction
+  (100% of 177,876 cells agree), national cumulative source errors accepted, pre-2022 weeks dropped,
+  extraction_valid 99.0%; district centroids from HDX COD-AB, weather re-fetched; hand-check pack v2
+  (`data/handcheck/v2/`, to fill)
+- [x] Mon 2 Nov (late) — radar: status quo, EARS C2/C3, NB-GLM with gating; signals, track record,
+  backtest (`docs/RADAR_BACKTEST.md`)
+- [ ] Tue 3 — fill and score the hand-check (`scripts/handcheck_score.py`); leptospirosis outlook
+  (district level, WER + weather lags) + rolling-origin backtest
+- [ ] Wed 4 — dashboard (This week, Map, Outlook, Track record) + weekly brief template
+- [ ] Thu 5 — report, two-page summary, video, submit by 23:59
