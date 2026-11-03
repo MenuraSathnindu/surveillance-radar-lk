@@ -6,13 +6,14 @@ is drawn as a marker inside Ampara; data/geo/kalmunai_point.json holds its town 
 
 from __future__ import annotations
 
+import common
 import numpy as np
 import pandas as pd
+import plotly.colors as pcolors
 import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
-import common
 from radar_lk import views as v
 
 week = common.as_of()
@@ -23,14 +24,12 @@ areas = sorted(common.wer()["area"].unique())
 
 st.title("Map")
 st.caption(
-    f"Strongest signal per district in {week}. {common.src_caption(issue, week)}. Kalmunai "
-    "RDHS has no boundary of its own (it lies within Ampara district), so it is the marker "
-    "inside Ampara."
+    f"Districts coloured by the number of active signals (alerts + early warnings) in {week}; "
+    f"held-back signals are listed on hover but not counted. {common.src_caption(issue, week)}. "
+    "Kalmunai RDHS has no boundary of its own (it lies within Ampara district), so it is the "
+    "marker inside Ampara."
 )
 
-rank = {"alert": 0, "early_warning": 1, "held_back": 2, "none": 3}
-best = x.assign(r=x["status"].map(rank)).sort_values("r").drop_duplicates("area")
-st_by = dict(zip(best["area"], best["status"], strict=True))
 lists = x.groupby("area").apply(
     lambda g: "<br>".join(
         f"{common.STATUS_TEXT[s]}: {v.DISEASE_TEXT.get(d, d)} ({o:.0f})"
@@ -38,79 +37,79 @@ lists = x.groupby("area").apply(
     ),
     include_groups=False,
 )
+active = x[x["status"] != "held_back"].groupby("area").size()
 m = pd.DataFrame({"area": areas})
-m["status"] = m["area"].map(st_by).fillna("none")
-m["label"] = m["status"].map(common.STATUS_TEXT)
+m["n"] = m["area"].map(active).fillna(0).astype(int)
 m["detail"] = m["area"].map(lists).fillna("no signal")
-m["code"] = m["status"].map(rank)
+best = m.sort_values("n", ascending=False)
+zmax = max(3, int(m["n"].max()))
+# one sequential hue (light -> dark), 0 = near-white
+SCALE = [[0.0, "#F4F3EF"], [0.001, "#FDE3CF"], [0.5, "#F08A3C"], [1.0, "#A83A00"]]
 
-order = ["alert", "early_warning", "held_back", "none"]
 fig = go.Figure()
 poly = m[m["area"] != "Kalmunai"]
-for s in order:
-    sub = poly[poly["status"] == s]
-    fig.add_trace(
-        go.Choropleth(
-            geojson=gj,
-            locations=sub["area"] if len(sub) else ["__none__"],
-            featureidkey="id",
-            z=np.zeros(max(len(sub), 1)),
-            colorscale=[[0, common.COLOR[s]], [1, common.COLOR[s]]],
-            showscale=False,
-            marker_line_color="white",
-            marker_line_width=1,
-            name=common.STATUS_TEXT[s],
-            showlegend=True,
-            customdata=np.c_[sub["label"], sub["detail"]] if len(sub) else None,
-            hovertemplate="<b>%{location}</b><br>%{customdata[0]}<br>%{customdata[1]}"
-            f"<br>WER {issue}, {week}<extra></extra>",
-        )
+fig.add_trace(
+    go.Choropleth(
+        geojson=gj,
+        locations=poly["area"],
+        featureidkey="id",
+        z=poly["n"],
+        zmin=0,
+        zmax=zmax,
+        colorscale=SCALE,
+        marker_line_color="white",
+        marker_line_width=1,
+        colorbar=dict(title="active<br>signals", thickness=12, len=0.5, dtick=1),
+        customdata=np.c_[poly["detail"]],
+        hovertemplate="<b>%{location}</b>: %{z} active<br>%{customdata[0]}"
+        f"<br>WER {issue}, {week}<extra></extra>",
     )
+)
 k = m[m["area"] == "Kalmunai"].iloc[0]
+kcol = pcolors.sample_colorscale(SCALE, [k["n"] / zmax])[0]
 fig.add_trace(
     go.Scattergeo(
         lon=[kal["lon"]],
         lat=[kal["lat"]],
         mode="markers+text",
         text=["Kalmunai"],
-        textposition="middle right",
+        textposition="middle left",
         textfont=dict(size=10, color="#52514E"),
-        marker=dict(
-            size=14, color=common.COLOR[k["status"]], line=dict(color="white", width=2)
-        ),
-        customdata=[[k["label"], k["detail"]]],
-        hovertemplate="<b>Kalmunai</b> (RDHS within Ampara)<br>%{customdata[0]}<br>"
+        marker=dict(size=14, color=kcol, line=dict(color="#52514E", width=1.5)),
+        customdata=[[int(k["n"]), k["detail"]]],
+        hovertemplate="<b>Kalmunai</b> (RDHS within Ampara): %{customdata[0]} active<br>"
         f"%{{customdata[1]}}<br>WER {issue}, {week}<extra></extra>",
-        name="Kalmunai (marker)",
         showlegend=False,
     )
 )
-fig.update_geos(fitbounds="locations", visible=False, bgcolor="rgba(0,0,0,0)")
+fig.update_geos(
+    projection_type="mercator",
+    fitbounds="locations",
+    visible=False,
+    bgcolor="rgba(0,0,0,0)",
+)
 fig.update_layout(
-    height=560,
+    height=620,
     margin=dict(l=0, r=0, t=10, b=0),
-    legend=dict(orientation="h", yanchor="bottom", y=1.0, x=0, title_text=""),
     paper_bgcolor="rgba(0,0,0,0)",
 )
 
 left, right = st.columns([5, 7])
 with left:
     ev = st.plotly_chart(
-        fig, use_container_width=True, on_select="rerun", selection_mode="points", key="map"
+        fig, width="stretch", on_select="rerun", selection_mode="points", key="map"
     )
 picked = None
 try:
     pts = ev.selection.points if ev else []
     if pts:
-        picked = pts[0].get("location") or (
-            "Kalmunai" if pts[0].get("curve_number") == len(order) else None
-        )
+        picked = pts[0].get("location") or ("Kalmunai" if pts[0].get("curve_number") == 1 else None)
 except AttributeError:
     picked = None
 if picked in areas:
     st.session_state["map_area"] = picked
 if "map_area" not in st.session_state:
-    st.session_state["map_area"] = best["area"].iloc[0] if len(best) else "Colombo"
+    st.session_state["map_area"] = best["area"].iloc[0]
 with right:
     area = st.selectbox(
         "District (or click the map)", areas, key="map_area", help="Small multiples below."
@@ -168,7 +167,8 @@ with right:
                         marker=dict(color=common.COLOR[tier], size=8, symbol=sym,
                                     line=dict(color="white", width=1)),
                         name=common.STATUS_TEXT[tier], showlegend=False,
-                        hovertemplate=f"{common.STATUS_TEXT[tier]} %{{x}}: %{{y:.0f}}<extra></extra>",
+                        hovertemplate=common.STATUS_TEXT[tier]
+                        + " %{x}: %{y:.0f}<extra></extra>",
                     ),
                     row=r, col=c,
                 )  # fmt: skip
@@ -182,7 +182,7 @@ with right:
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
     )
-    st.plotly_chart(sm, use_container_width=True, key="multiples")
+    st.plotly_chart(sm, width="stretch", key="multiples")
     first = obs["week"].min() if len(obs) else week
     st.caption(
         f"{area}: last 52 reported weeks ({first} to {week}); line = cases as first printed, "

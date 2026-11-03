@@ -6,7 +6,8 @@ Source: OCHA HDX COD-AB Sri Lanka admin-2 (Survey Department of Sri Lanka, CC BY
 data/raw/boundaries/lka_admin_boundaries.geojson.zip (not committed: 128 MB). Polygons are
 simplified in the Sri Lanka grid (EPSG:5235, tolerance TOL_M metres, topology kept per polygon),
 converted to WGS84 and rounded to 4 decimals (~10 m). 25 administrative districts = 25 RDHS;
-Kalmunai RDHS has no polygon (it is part of Ampara district), so data/geo/kalmunai_point.json
+Exterior rings are made clockwise (plotly geo / d3-geo convention). Kalmunai RDHS has no
+polygon (it is part of Ampara district), so data/geo/kalmunai_point.json
 holds its town point and the map draws it as a marker inside Ampara.
 """
 
@@ -30,6 +31,17 @@ TOL_M = 400.0
 NAME_FIX = {"moneragala": "Monaragala"}
 
 
+def _clockwise(geom):
+    from shapely.geometry import MultiPolygon, Polygon
+    from shapely.geometry.polygon import orient
+
+    if isinstance(geom, Polygon):
+        return orient(geom, sign=-1.0)
+    if isinstance(geom, MultiPolygon):
+        return MultiPolygon([orient(p, sign=-1.0) for p in geom.geoms])
+    return geom
+
+
 def _round(o, nd=4):
     if isinstance(o, float):
         return round(o, nd)
@@ -49,6 +61,9 @@ def main() -> None:
     g = g[["rdhs", "geometry"]].to_crs(5235)
     g["geometry"] = g.geometry.simplify(TOL_M, preserve_topology=True)
     g = g.to_crs(4326)
+    # plotly's spherical geo (d3-geo) wants exterior rings clockwise; otherwise each polygon is
+    # drawn as "everything except the district" and the map fills as one block
+    g["geometry"] = g.geometry.apply(_clockwise)
     OUT.mkdir(parents=True, exist_ok=True)
     gj = json.loads(g.to_json(drop_id=True))
     for f in gj["features"]:
@@ -62,7 +77,9 @@ def main() -> None:
         json.dumps({"rdhs": "Kalmunai", "lat": lat, "lon": lon, "within": "Ampara"})
     )
     size = (OUT / "rdhs.geojson").stat().st_size
-    print(f"wrote {OUT / 'rdhs.geojson'} ({len(g)} polygons, {size / 1024:.0f} KB) + Kalmunai point")
+    print(
+        f"wrote {OUT / 'rdhs.geojson'} ({len(g)} polygons, {size / 1024:.0f} KB) + Kalmunai point"
+    )
 
 
 if __name__ == "__main__":

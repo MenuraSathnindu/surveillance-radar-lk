@@ -59,6 +59,8 @@ Delivered as a Streamlit dashboard + a one-page weekly brief per RDHS.
   alerts persist as often as kept ones, so hiding them would lose real rises.
   T* is display-only (it steps from ~40% to ~93% at 2023-W52).
 - **Every displayed number carries its source file and as-of date.**
+- **Non-clinical guard.** Briefs and dashboard text pass `radar_lk.guard` (blocklist in
+  `config/sources.yaml` `nonclinical`, incl. drug names); a hit fails the brief build and tests.
 - **No LLM reads PDFs or produces numbers.** An LLM may only phrase the brief from computed values;
   the template path must always work without it.
 - Attribute the Epidemiology Unit and NDCU as primary data sources on every page.
@@ -81,8 +83,14 @@ src/radar_lk/store.py        tidy schema, Parquet/DuckDB IO
 src/radar_lk/radar/          baselines (EARS, NB-GLM, Farrington via R), gating, backtest
 src/radar_lk/outlook/        features (lag>=2 weather), models (persistence, climatology, GLM, LightGBM),
                              conformal (+Venn-Abers), neighbours (HDX adjacency), backtest, report
-src/radar_lk/brief/          weekly brief generation (template first)
-app/streamlit_app.py         dashboard
+src/radar_lk/brief/build.py  weekly brief per RDHS (template only): Markdown + one-page PDF
+src/radar_lk/views.py        as-of views over data/clean shared by dashboard and brief (replay)
+src/radar_lk/guard.py        non-clinical guard (blocklist in config `nonclinical`)
+src/radar_lk/pipeline.py     one command: download -> parse -> radar -> outlook -> briefs
+app/streamlit_app.py         dashboard entrypoint (st.navigation; sidebar as-of week, banner,
+                             footer); pages in app/views/ (NOT app/pages/, which would switch
+                             Streamlit to legacy auto-pages and skip the entrypoint)
+data/geo/                    simplified RDHS GeoJSON (+ Kalmunai point) for the map
 data/raw/                    original PDFs (gitignored), data/raw/manifest.csv (committed)
 data/clean/                  validated Parquet + radar.duckdb
 data/review_queue/           rows that failed validation
@@ -111,7 +119,10 @@ python -m radar_lk.ingest.download --source wer --years 2022-2026
 python -m radar_lk.ingest.download --source ndcu_weekly
 python -m radar_lk.radar.run --reuse-fits && python -m radar_lk.radar.backtest --reuse
 python -m radar_lk.outlook.backtest            # ~12 min; --reuse rebuilds the report only
-streamlit run app/streamlit_app.py
+python -m radar_lk.pipeline --all              # everything, idempotent, logs to data/logs/
+python -m radar_lk.brief.build --sample         # docs/sample_brief_<district>.pdf
+streamlit run app/streamlit_app.py              # reads data/clean + data/geo only
+python scripts/screenshots.py                   # docs/figures/app_*.png (Playwright)
 ```
 
 ## Working style

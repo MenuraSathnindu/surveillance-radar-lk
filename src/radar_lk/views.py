@@ -184,7 +184,7 @@ def outlook_at(fc: pd.DataFrame, disease: str, week: str, L: int) -> pd.DataFram
 
 def outlook_wide(o: pd.DataFrame, L: int) -> pd.DataFrame:
     """One row per district: this week / next week / h=1 / h=2, emerging-persistent label,
-    ranked by P(elevated) this week."""
+    ranked by P(elevated) next week (proposal 7.3)."""
     if o.empty:
         return o
     rows = []
@@ -212,7 +212,7 @@ def outlook_wide(o: pd.DataFrame, L: int) -> pd.DataFrame:
         ["persistent", "emerging", "easing"],
         "",
     )
-    return w.sort_values("p_this", ascending=False).reset_index(drop=True)
+    return w.sort_values("p_next", ascending=False).reset_index(drop=True)
 
 
 def rain_panel(weather: pd.DataFrame, area: str, end_week: str, n: int = 12) -> pd.DataFrame:

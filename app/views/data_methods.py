@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import streamlit as st
-
 import common
+import streamlit as st
 
 st.title("Data & methods")
 
@@ -31,7 +30,7 @@ digraph {
   val -> rev [style=dashed];
 }
 """,
-    use_container_width=True,
+    width="stretch",
 )
 st.caption(
     "One-way batch pipeline, run with `python -m radar_lk.pipeline --all`. The dashboard reads "
@@ -61,17 +60,23 @@ with c2:
     common.claim("Source-table scrambling")
 
 st.subheader("Data sources and licences")
+SOURCES = [
+    ("Epidemiology Unit, Ministry of Health, Sri Lanka",
+     "Weekly Epidemiological Report (WER) Table 1: weekly notified cases by RDHS for 14 "
+     "diseases, completeness C**",
+     "Public reports; primary data source, attributed on every page"),
+    ("National Dengue Control Unit, Ministry of Health",
+     "Weekly Dengue Update: high-risk MOH lists (2026)", "Public reports; external check only"),
+    ("Open-Meteo",
+     "Daily rainfall, temperature, humidity at one point per district, aggregated to weeks",
+     "CC BY 4.0"),
+    ("OCHA HDX COD-AB (Survey Department of Sri Lanka)",
+     "Admin-2 district boundaries (simplified in data/geo)", "CC BY-IGO"),
+]  # fmt: skip
 st.markdown(
-    """
-| Source | What | Licence / terms |
-|---|---|---|
-| Epidemiology Unit, Ministry of Health, Sri Lanka | Weekly Epidemiological Report (WER) Table 1: weekly notified cases by RDHS for 14 diseases, completeness C** | Public reports; primary data source, attributed on every page |
-| National Dengue Control Unit, Ministry of Health | Weekly Dengue Update: high-risk MOH lists (2026) | Public reports; external check only |
-| Open-Meteo | Daily rainfall, temperature, humidity at one point per district, aggregated to weeks | CC BY 4.0 |
-| OCHA HDX COD-AB (Survey Department of Sri Lanka) | Admin-2 district boundaries (simplified in data/geo) | CC BY-IGO |
-
-All data are public, aggregated weekly counts by area. No personal data.
-"""
+    "| Source | What | Licence / terms |\n|---|---|---|\n"
+    + "\n".join(f"| {a} | {b} | {c} |" for a, b, c in SOURCES)
+    + "\n\nAll data are public, aggregated weekly counts by area. No personal data."
 )
 
 st.subheader("Limitations")

@@ -1,0 +1,11 @@
+# Dashboard runtime only (Streamlit Community Cloud). The app reads the committed data/clean and
+# data/geo; it never parses PDFs or fits models, so pdfplumber, lightgbm, statsmodels, sklearn,
+# geopandas etc. are NOT needed here (they are in pyproject.toml for the pipeline).
+# Checked by running every page with those libraries blocked from import.
+streamlit==1.66.1
+pandas==3.1.0
+numpy==2.5.4
+pyarrow==26.0.0
+plotly==7.1.0
+PyYAML==6.0.3
+fpdf2==2.9.0

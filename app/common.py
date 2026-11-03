@@ -113,6 +113,15 @@ def headlines() -> dict[str, tuple[str, str, str]]:
     return out
 
 
+@st.cache_data(show_spinner=False)
+def headline_sentence(start: str) -> str:
+    """A prose line of docs/HEADLINES.md that starts with `start`, verbatim."""
+    for line in (ROOT / "docs" / "HEADLINES.md").read_text(encoding="utf-8").splitlines():
+        if line.startswith(start):
+            return line
+    return ""
+
+
 def claim(label: str) -> None:
     """Show one HEADLINES.md row verbatim: value, meaning, and its source."""
     h = headlines().get(label)

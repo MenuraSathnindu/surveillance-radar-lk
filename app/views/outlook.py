@@ -4,11 +4,11 @@ rainfall panel. Venn-Abers ranges appear only in the tooltip, labelled 'calibrat
 
 from __future__ import annotations
 
+import common
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-import common
 from radar_lk import views as v
 
 week = common.as_of()
@@ -44,25 +44,31 @@ if o.empty:
 
 tr = common.outlook_track()
 tr = tr[(tr["disease"] == dis)].drop_duplicates("h").set_index("h")
+
 NAMES = {"persistence": "Persistence", "climatology": "Seasonal climatology",
          "glm": "NB GLM / logistic", "lightgbm": "LightGBM"}  # fmt: skip
 
-# ranked bar: P(elevated) this week; calibration range only in the tooltip
-o = o.sort_values("p_this", ascending=True)
-col = [common.COLOR["alert"] if p >= 0.5 else common.COLOR["early_warning"] for p in o["p_this"]]
+# ranked bar: P(elevated) next week (proposal 7.3); calibration range only in the tooltip
+o = o.sort_values("p_next", ascending=True)
+col = [common.COLOR["alert"] if p >= 0.5 else common.COLOR["early_warning"] for p in o["p_next"]]
 fig = go.Figure(
     go.Bar(
-        x=o["p_this"] * 100,
+        x=o["p_next"] * 100,
         y=o["area"],
         orientation="h",
         marker_color=col,
         customdata=list(
             zip(
-                o["plo_this"] * 100,
-                o["phi_this"] * 100,
-                o["count_this"],
-                o["lo_this"],
-                o["hi_this"],
+                [
+                    f"calibration range: {100 * a:.0f}-{100 * b:.0f}%"
+                    if pd.notna(a)
+                    else "no calibration range (baseline model)"
+                    for a, b in zip(o["plo_next"], o["phi_next"], strict=True)
+                ],
+                o["model_next"].map(NAMES),
+                o["count_next"],
+                o["lo_next"],
+                o["hi_next"],
                 o["pattern"].replace("", "-"),
                 o["source_issue"],
                 strict=True,
@@ -70,7 +76,7 @@ fig = go.Figure(
         ),
         hovertemplate=(
             "<b>%{y}</b>: %{x:.0f}% chance of an elevated week<br>"
-            "calibration range: %{customdata[0]:.0f}-%{customdata[1]:.0f}%<br>"
+            "%{customdata[0]} · model: %{customdata[1]}<br>"
             "expected %{customdata[2]:.0f} cases (90%: %{customdata[3]:.0f}-%{customdata[4]:.0f})"
             "<br>pattern: %{customdata[5]}<br>"
             f"from WER %{{customdata[6]}}, {week}<extra></extra>"
@@ -81,21 +87,21 @@ fig.add_vline(x=50, line_dash="dot", line_color="#898781")
 fig.update_layout(
     height=24 * len(o) + 80,
     margin=dict(l=10, r=10, t=30, b=30),
-    xaxis=dict(title=f"P(elevated) this week ({this_w}), %", range=[0, 100], gridcolor="#E9E8E2"),
-    title=dict(text="Districts ranked by chance of an elevated week", x=0, font_size=14),
+    xaxis=dict(title=f"P(elevated) next week ({next_w}), %", range=[0, 100], gridcolor="#E9E8E2"),
+    title=dict(text="Districts ranked by chance of an elevated week next week", x=0, font_size=14),
     plot_bgcolor="rgba(0,0,0,0)",
     paper_bgcolor="rgba(0,0,0,0)",
 )
 left, right = st.columns([5, 7])
 with left:
-    st.plotly_chart(fig, use_container_width=True, key="outlook_bar")
+    st.plotly_chart(fig, width="stretch", key="outlook_bar")
     st.caption(
         "Hover for the calibration range (Venn-Abers): how sure the calibration is, not how "
         "uncertain the outbreak is; that is the count interval in the table."
     )
 
 with right:
-    t = o.sort_values("p_this", ascending=False)
+    t = o.sort_values("p_next", ascending=False)
 
     def p(x):
         return f"{100 * x:.0f}%" if pd.notna(x) else ""
@@ -119,7 +125,7 @@ with right:
     st.dataframe(
         tab,
         hide_index=True,
-        use_container_width=True,
+        width="stretch",
         column_config={
             "Pattern": st.column_config.TextColumn(
                 help="Persistent: elevated now and forecast elevated. Emerging: not elevated now "
@@ -130,17 +136,20 @@ with right:
             ),
         },
     )
-    interval = "adaptive conformal (ACI)" if tr["interval_method"].iloc[0] == "aci" else (
-        "split-conformal"
+    interval = (
+        "adaptive conformal (ACI)"
+        if tr["interval_method"].iloc[0] == "aci"
+        else ("split-conformal")
     )
     rows = []
     for h, name in ((L + 1, "This week"), (L + 2, "Next week"), (1, "Week +1"), (2, "Week +2")):
         if h in tr.index:
             r = tr.loc[h]
+            pm, cm = NAMES[r["selected probability model"]], NAMES[r["selected count model"]]
             rows.append(
-                f"- **{name} (h={h})**: probability from "
-                f"**{NAMES[r['selected probability model']]}** ({r['probability selection reason']}); "
-                f"counts from **{NAMES[r['selected count model']]}** ({r['count selection reason']})."
+                f"- **{name} (h={h})**: probability from **{pm}** "
+                f"({r['probability selection reason']}); counts from **{cm}** "
+                f"({r['count selection reason']})."
             )
     st.markdown(
         "**Models used** (selected per horizon on 2024 origins, tested on 2025-26):\n"
@@ -181,7 +190,7 @@ else:
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
     )
-    st.plotly_chart(rf, use_container_width=True, key="rain")
+    st.plotly_chart(rf, width="stretch", key="rain")
     st.caption(
         f"{area}: weekly rain for the 12 weeks to {end} (the time of use: rainfall is observed in "
         "near real time, unlike case reports), against the mean of the same weeks in earlier "

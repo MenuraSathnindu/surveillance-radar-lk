@@ -493,8 +493,17 @@ def write(cfg, fc: pd.DataFrame, tr: pd.DataFrame, lives: dict) -> None:
             "",
             md(
                 y26.assign(model=y26["model"].map(LABEL))[
-                    ["model", "h", "n", "MASE vs persistence", "BSS vs persistence",
-                     "BSS vs climatology", "AUROC", "coverage90 %", "coverage90 ACI %"]
+                    [
+                        "model",
+                        "h",
+                        "n",
+                        "MASE vs persistence",
+                        "BSS vs persistence",
+                        "BSS vs climatology",
+                        "AUROC",
+                        "coverage90 %",
+                        "coverage90 ACI %",
+                    ]
                 ].sort_values(["h", "model"])
             ),  # fmt: skip
             "",

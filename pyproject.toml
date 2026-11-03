@@ -21,6 +21,7 @@ dependencies = [
     "lightgbm>=4.3",
     "mapie>=0.8",
     "venn-abers>=1.4",
+    "fpdf2>=2.7",
     "geopandas>=0.14",
     "plotly>=5.20",
     "streamlit>=1.33",
@@ -30,7 +31,7 @@ dependencies = [
 # pymupdf (AGPL) is only a dev tool: scripts/cross_extract.py uses it as an independent second
 # extractor to check the pdfplumber parser. Nothing in src/ imports it.
 # matplotlib draws the static backtest figures in docs/figures (the dashboard uses plotly).
-dev = ["pytest>=8", "ruff>=0.4", "pymupdf>=1.24", "matplotlib>=3.8"]
+dev = ["pytest>=8", "ruff>=0.4", "pymupdf>=1.24", "matplotlib>=3.8", "playwright>=1.40"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

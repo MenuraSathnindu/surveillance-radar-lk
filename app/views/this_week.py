@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import common
 import numpy as np
 import pandas as pd
 import streamlit as st
 
-import common
 from radar_lk import views as v
 from radar_lk.brief import build as brief
 
@@ -35,7 +35,9 @@ c3.metric(
     k["held_back"],
     help=f"Signals in weeks with low reporting completeness (shown greyed out). {src}",
 )
-c4.metric("Districts affected", k["districts"], help=f"Districts with an alert or early warning. {src}")
+c4.metric(
+    "Districts affected", k["districts"], help=f"Districts with an alert or early warning. {src}"
+)
 
 
 def _fmt(x: pd.DataFrame) -> pd.DataFrame:
@@ -54,7 +56,10 @@ def _fmt(x: pd.DataFrame) -> pd.DataFrame:
                 f"{e:.0f} (up to {u:.0f})" if pd.notna(e) else ""
                 for e, u in zip(x["expected"], x["upper"], strict=True)
             ],
-            "Percentile": [f"{100 * p:.1f}" if pd.notna(p) else "" for p in x["percentile"]],
+            "Percentile": [
+                (">99.9" if p >= 0.9995 else f"{100 * p:.1f}") if pd.notna(p) else ""
+                for p in x["percentile"]
+            ],
             "Weeks persisted": [
                 f"{int(w)} (sustained)" if w >= 2 else f"{int(w)}" if pd.notna(w) else ""
                 for w in x["weeks_persisted"]
@@ -95,7 +100,7 @@ else:
     st.dataframe(
         sty,
         hide_index=True,
-        use_container_width=True,
+        width="stretch",
         column_order=[c for c in t.columns if c != "_status"],
         column_config={
             "Percentile": st.column_config.TextColumn(
@@ -113,7 +118,7 @@ else:
     )
     st.caption(
         "Sorted: alerts, then early warnings, then held back (greyed out, never hidden). "
-        f"Held-back label: \"{labels['held_back'].replace('{completeness_pct:.0f}', 'X')}\""
+        f'Held-back label: "{labels["held_back"].replace("{completeness_pct:.0f}", "X")}"'
     )
 
 st.subheader("Weekly brief")
@@ -127,7 +132,9 @@ with st.expander(f"Brief for {area}, {week}", expanded=True):
 
 @st.cache_data(show_spinner="Building PDF ...")
 def _pdf(area: str, week: str) -> bytes:
-    return brief.pdf_bytes(brief.build(area, week, common.series(), common.forecasts(), common.wer()))
+    return brief.pdf_bytes(
+        brief.build(area, week, common.series(), common.forecasts(), common.wer())
+    )
 
 
 @st.cache_data(show_spinner="Building all 26 briefs ...")

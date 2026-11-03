@@ -18,6 +18,7 @@ non-clinical guard (radar_lk.guard) or the build fails.
 from __future__ import annotations
 
 import io
+import math
 import zipfile
 from dataclasses import dataclass, field
 
@@ -39,6 +40,13 @@ FOOTER = (
 )
 
 
+def week_end(week: str) -> str:
+    from datetime import date, timedelta
+
+    y, w = week.split("-W")
+    return f"{date.fromisocalendar(int(y), int(w), 1) + timedelta(days=6):%d %b %Y}"
+
+
 def cite(issue: str, week: str) -> str:
     return f"(WER {issue}, {week})" if issue else f"({week})"
 
@@ -48,8 +56,21 @@ def n0(x) -> str:
 
 
 def pct(p) -> str:
-    """A 0..1 percentile as e.g. '99.9th'."""
-    return f"{100 * float(p):.1f}th"
+    """A 0..1 percentile as e.g. '99.9th'; at or above 99.95 'above the 99.9th' (not '100.0th')."""
+    p = float(p)
+    return "above the 99.9th" if p >= 0.9995 else f"{100 * p:.1f}th"
+
+
+def cases(x) -> str:
+    return f"{n0(x)} case" if n0(x) == "1" else f"{n0(x)} cases"
+
+
+MODEL_TEXT = {
+    "persistence": "the latest reported week (persistence)",
+    "climatology": "the usual pattern for this time of year (seasonal climatology)",
+    "glm": "a regression model with recent counts, season and rainfall",
+    "lightgbm": "a tree model with recent counts, season and rainfall",
+}
 
 
 def dname(d: str) -> str:
@@ -67,7 +88,8 @@ class Brief:
         out = [
             f"# Weekly signal brief: {self.area} RDHS",
             "",
-            f"As of reporting week {self.week} {cite(self.issue, self.week)}. The WER is "
+            f"As of reporting week {self.week} (ending {week_end(self.week)}) "
+            f"{cite(self.issue, self.week)}. The WER is "
             "published with a lag of about two months, so this describes weeks already past.",
             "",
         ]
@@ -81,7 +103,7 @@ class Brief:
 
 def _alert_text(r) -> str:
     return (
-        f"{dname(r.disease)} {n0(r.observed)} cases, expected about {n0(r.expected)} "
+        f"{dname(r.disease)} {cases(r.observed)}, expected about {n0(r.expected)} "
         f"(range up to {n0(r.upper)}), {pct(r.percentile)} percentile "
         f"{cite(r.source_issue, r.week)}"
     )
@@ -89,7 +111,7 @@ def _alert_text(r) -> str:
 
 def _ew_text(r) -> str:
     return (
-        f"{dname(r.disease)} {n0(r.observed)} cases, above its recent level of about "
+        f"{dname(r.disease)} {cases(r.observed)}, above its recent level of about "
         f"{n0(r.expected)} (range up to {n0(r.upper)}) but not yet beyond the seasonal range "
         f"{cite(r.source_issue, r.week)}"
     )
@@ -153,11 +175,15 @@ def build(area: str, week: str, sw: pd.DataFrame, fc: pd.DataFrame, wer: pd.Data
         if o is None or o.empty:
             continue
         r = o.iloc[0]
+        wide = r.hi_this > 5 * max(r.count_this, 1) and r.hi_this - r.lo_this > 30
         parts.append(
             f"{dname(d)}: chance of an elevated week {n0(100 * r.p_this)}% this week "
-            f"({r.week_this}) and {n0(100 * r.p_next)}% next week ({r.week_next}); expected "
-            f"about {n0(r.count_this)} cases this week (90% range {n0(r.lo_this)} to "
-            f"{n0(r.hi_this)}) {cite(r.source_issue, week)}"
+            f"({r.week_this}) and {n0(100 * r.p_next)}% next week ({r.week_next}; elevated "
+            f"here means {cases(math.ceil(r.threshold))} or more), from "
+            f"{MODEL_TEXT[r.model_this]}; expected about {cases(r.count_this)} this week "
+            f"(90% range {n0(r.lo_this)} to {n0(r.hi_this)}"
+            + ("; very wide because recent forecasts missed often" if wide else "")
+            + f") {cite(r.source_issue, week)}"
         )
     b.lines.append(
         (
@@ -213,7 +239,8 @@ def pdf_bytes(b: Brief) -> bytes:
         0,
         5,
         _latin1(
-            f"As of reporting week {b.week} {cite(b.issue, b.week)}. The WER is published with "
+            f"As of reporting week {b.week} (ending {week_end(b.week)}) "
+            f"{cite(b.issue, b.week)}. The WER is published with "
             "a lag of about two months, so this describes weeks already past."
         ),
         new_x="LMARGIN",

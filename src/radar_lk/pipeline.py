@@ -49,7 +49,10 @@ INPUTS = {
     "parse": lambda: [RAW_DIR / "wer", CONFIG_PATH],
     "radar": lambda: [CLEAN_DIR / "wer.parquet"],
     "outlook": lambda: [CLEAN_DIR / "wer.parquet", CLEAN_DIR / "weather.parquet"],
-    "briefs": lambda: [CLEAN_DIR / "radar_signals.parquet", CLEAN_DIR / "outlook_forecasts.parquet"],
+    "briefs": lambda: [
+        CLEAN_DIR / "radar_signals.parquet",
+        CLEAN_DIR / "outlook_forecasts.parquet",
+    ],
 }
 
 
@@ -134,7 +137,8 @@ def main(argv=None) -> int:
             state[s] = fp
             STATE.write_text(json.dumps(state, indent=2))
         log(f"[{s}] ok ({dt:.0f}s)")
-    log(f"pipeline end: {'failed: ' + ', '.join(failed) if failed else 'all steps ok'}; log {log.path}")
+    status = "failed: " + ", ".join(failed) if failed else "all steps ok"
+    log(f"pipeline end: {status}; log {log.path}")
     return 1 if any(s not in ("download", "weather") for s in failed) else 0
 
 

@@ -63,7 +63,14 @@ If the site goes down again: drop PDFs into `data/raw/wer/` and run
   backtest from 2024-W01 (refit every 4 weeks), split-conformal intervals, Venn-Abers
   probabilities, SHAP, rainfall-lag figure, dengue vs NDCU check (`docs/OUTLOOK_BACKTEST.md`,
   `data/clean/outlook_forecasts.parquet`, `outlook_track_record.parquet`)
-- [ ] Wed 4 — dashboard (This week, Map, Outlook, Track record) + weekly brief template; show
-  `tier_label` / `burden_label` (held-back greyed out), `weeks_persisted`, track record, the
-  outlook's dashboard model per horizon (stop rule) with intervals and Venn-Abers ranges
+- [x] Tue 3 — outlook fixes: model selection on 2024 origins only (test = 2025-26 origins),
+  adaptive conformal (ACI; used for dengue only, width cost reported), Venn-Abers range shown only
+  as a tooltip; HEADLINES section 7 rewritten
+- [x] Tue 3 — one-command pipeline (`python -m radar_lk.pipeline --all`, idempotent, logs) and
+  Windows Task Scheduler instructions (README) in place of the GitHub Actions job
+- [x] Tue 3 — dashboard (This week, Map, Outlook, Track record, Data & methods) with as-of replay,
+  stale-data banner, footer; weekly brief (Markdown + PDF, zip of 26) and
+  `docs/sample_brief_Galle.pdf`; non-clinical guard, number-provenance and AppTest tests; slim
+  requirements.txt; screenshots in docs/figures/app_*.png
+- [ ] Wed 4 — send the sample brief to a public-health reviewer; deploy to Streamlit Community Cloud
 - [ ] Thu 5 — report, two-page summary, video (numbers from `docs/HEADLINES.md`), submit by 23:59

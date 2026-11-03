@@ -24,12 +24,21 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
+PAGES = [
+    ("this_week", "This week", ":material/notifications:"),
+    ("map", "Map", ":material/map:"),
+    ("outlook", "Outlook", ":material/trending_up:"),
+    ("track_record", "Track record", ":material/fact_check:"),
+    ("data_methods", "Data & methods", ":material/description:"),
+]
+# the landing page can be chosen with ?page=<slug> (links, screenshots) or, in tests, the
+# `start_page` session key; otherwise "This week"
+start = st.session_state.get("start_page") or st.query_params.get("page") or "this_week"
+if start not in {p[0] for p in PAGES}:
+    start = "this_week"
 pages = [
-    st.Page("pages/this_week.py", title="This week", icon=":material/notifications:", default=True),
-    st.Page("pages/map.py", title="Map", icon=":material/map:"),
-    st.Page("pages/outlook.py", title="Outlook", icon=":material/trending_up:"),
-    st.Page("pages/track_record.py", title="Track record", icon=":material/fact_check:"),
-    st.Page("pages/data_methods.py", title="Data & methods", icon=":material/description:"),
+    st.Page(f"views/{slug}.py", title=title, icon=icon, url_path=slug, default=slug == start)
+    for slug, title, icon in PAGES
 ]
 pg = st.navigation(pages)
 with st.sidebar:
