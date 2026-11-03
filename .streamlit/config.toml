@@ -1,0 +1,15 @@
+# Dashboard theme: matches the app palette (Okabe-Ito based, colour-vision-deficiency safe; see
+# app/common.py COLOR). Light surface, blue accent (= early warning / observed line colour).
+[theme]
+base = "light"
+primaryColor = "#0072B2"
+backgroundColor = "#FCFCFB"
+secondaryBackgroundColor = "#F3F2EE"
+textColor = "#0B0B0B"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
+
+[server]
+runOnSave = false

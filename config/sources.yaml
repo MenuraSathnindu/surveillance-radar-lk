@@ -158,7 +158,7 @@ wer_calendar:
         100%/100%, monotone 100%.
 
 # WER publication lag (src/radar_lk/ingest/publication_lag.py)
-publication_lag_weeks: 8   # median days from end of reporting week to PDF CreationDate = 53 over 239 issues
+publication_lag_weeks: 8   # median days from end of reporting week to PDF CreationDate = 53 over 242 issues
 
 # Outlook (src/radar_lk/outlook): district-level forecasts that fill the publication gap. The WER
 # reports week t about `publication_lag_weeks` (L) weeks later, but rainfall is observed in near

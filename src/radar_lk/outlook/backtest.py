@@ -119,6 +119,45 @@ def add_aci(fc: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     return fc
 
 
+# ------------------------------------------------------------------ display probabilities
+
+PRIOR_WEIGHT = 2.0  # pseudo-weeks of the 20% base rate added to a district's own frequency
+
+
+def display_probabilities(fc: pd.DataFrame, base_rate: float) -> pd.DataFrame:
+    """`p_display`: the probability shown on the dashboard and in the brief (post-hoc, display
+    only; evaluation and model selection keep using `p_elevated`).
+
+    GLM / LightGBM: their Venn-Abers probability (= p_elevated). Persistence and climatology are
+    0/1 or a frequency over a few past weeks, so they would print as 0% or 100%. Shown instead,
+    both estimated PAST-ONLY:
+    * persistence: P(elevated at t+h | elevated status at t), per disease and horizon, from every
+      earlier forecast whose target was already reported at the origin (expanding window, warm-up
+      included), Laplace-smoothed (k + 1) / (n + 2);
+    * climatology: the district's own past frequency of elevated weeks at that time of year
+      (k of n past weeks, +-1 week), smoothed with PRIOR_WEIGHT pseudo-weeks at the base rate
+      (20% by construction: the threshold is the past 80th percentile): (k + w r) / (n + w)."""
+    fc = fc.copy()
+    fc["p_display"] = fc["p_elevated"]
+    cl = fc["model"] == "climatology"
+    n = fc.loc[cl, "clim_n"].fillna(0).to_numpy(float)
+    k = fc.loc[cl, "p_raw"].to_numpy(float) * n
+    fc.loc[cl, "p_display"] = (k + PRIOR_WEIGHT * base_rate) / (n + PRIOR_WEIGHT)
+    for h, g in fc[fc["model"] == "persistence"].groupby("h", sort=False):
+        raw = g["p_raw"].to_numpy(float)
+        grp = np.where(np.isnan(raw), -1, raw >= 0.5).astype(int)
+        t, lab = g["t"].to_numpy(), g["elevated"].to_numpy(float)
+        out = np.full(len(g), np.nan)
+        for o in np.unique(t):
+            test = t == o
+            pool = (t + h <= o) & ~np.isnan(lab)
+            for kk in (0, 1):
+                sel = pool & (grp == kk)
+                out[test & (grp == kk)] = (lab[sel].sum() + 1) / (sel.sum() + 2)
+        fc.loc[g.index, "p_display"] = np.where(np.isnan(out), g["p_elevated"], out)
+    return fc
+
+
 # ------------------------------------------------------------------ metrics
 
 SIMPLE = ["persistence", "climatology", "glm", "lightgbm"]  # simplest first (tie-break)
@@ -203,6 +242,10 @@ def metrics(fc: pd.DataFrame, cfg: dict, weeks: pd.DataFrame) -> pd.DataFrame:
                 for k in (80, 90):
                     r[f"coverage{k} %"], r[f"width{k}"] = _cover(g, k)
                     r[f"coverage{k} ACI %"], r[f"width{k} ACI"] = _cover(g, k, "_aci")
+                cd = g.dropna(subset=["p_display", "elevated"])
+                r["Brier (display)"] = (
+                    float(np.mean((cd["p_display"] - cd["elevated"]) ** 2)) if len(cd) else np.nan
+                )
                 if m in CALIBRATED:
                     ok = g["p_lo"].notna()
                     r["mean p range"] = (
@@ -321,7 +364,7 @@ COLS = [
     "area", "disease", "origin_week", "target_week", "h", "model", "pred_count", "lo80", "hi80",
     "lo90", "hi90", "lo80_aci", "hi80_aci", "lo90_aci", "hi90_aci", "p_elevated", "p_lo", "p_hi",
     "elevated_threshold", "as_of", "source_issues", "source_issue", "kind", "observed",
-    "elevated_obs", "p_raw", "target_year", "target_week_start", "dashboard_count",
+    "elevated_obs", "p_raw", "p_display", "target_year", "target_week_start", "dashboard_count",
     "dashboard_class", "interval_method", "t", "tau",
 ]  # fmt: skip
 RAW = DATA_DIR / "cache" / "outlook_raw.parquet"
@@ -350,6 +393,9 @@ def post(cfg: dict, raw: pd.DataFrame, lives: dict) -> None:
         weeks = inp.weeks.set_index("t")
         fc["target_year"] = weeks.loc[fc["tau"], "epi_year"].to_numpy()
         fc = add_aci(fc, cfg)
+        cn = features.build(inp, sorted(fc["t"].unique()), cfg)[["area_i", "t", "h", "clim_n"]]
+        fc = fc.merge(cn, on=["area_i", "t", "h"], how="left")
+        fc = display_probabilities(fc, 1 - cfg["elevated_quantile"])
         tr = metrics(fc, cfg, inp.weeks)
         sel = select(tr)
         aci = aci_decision(tr, sel, cfg)

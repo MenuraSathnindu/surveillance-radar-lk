@@ -59,6 +59,7 @@ fig.add_trace(
         colorscale=SCALE,
         marker_line_color="white",
         marker_line_width=1,
+        unselected=dict(marker=dict(opacity=0.85)),  # keep colours readable after a click
         colorbar=dict(title="active<br>signals", thickness=12, len=0.5, dtick=1),
         customdata=np.c_[poly["detail"]],
         hovertemplate="<b>%{location}</b>: %{z} active<br>%{customdata[0]}"

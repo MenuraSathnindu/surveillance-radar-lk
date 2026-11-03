@@ -242,10 +242,13 @@ def build(inp: Inputs, origins, cfg: dict) -> pd.DataFrame:
                     cm = np.nanmean(v, axis=1)
                     hit = np.where(np.isnan(v), np.nan, (v >= thr[:, None]).astype(float))
                     cf = np.nanmean(hit, axis=1)
+                    cn = np.sum(~np.isnan(hit), axis=1).astype(float)
                 else:
                     cm = cf = np.full(A, np.nan)
+                    cn = np.zeros(A)
             b["clim_mean"] = np.where(np.isnan(cm), m8, cm)
             b["clim_freq"] = np.where(np.isnan(cf), 1 - cfg["elevated_quantile"], cf)
+            b["clim_n"] = cn  # past same-time-of-year weeks behind clim_freq
             y = inp.Y[:, tau] if tau <= inp.last_t else np.full(A, np.nan)
             b["y"] = y
             b["elevated"] = np.where(np.isnan(y) | np.isnan(thr), np.nan, (y >= thr).astype(float))

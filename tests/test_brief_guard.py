@@ -100,9 +100,10 @@ def allowed_numbers(area, week, sw, fc, wer) -> set[str]:
     ok |= _fmt(s["percentile"], pct=True, one=True)
     ok |= _fmt(w["completeness_pct"]) | _fmt(w["completeness_p10"]) | _fmt(w["revision_delta"])
     ok.add(str(int(w["revised"].fillna(False).astype(bool).sum())))
-    for c in ("pred_count", "lo90", "hi90", "lo90_aci", "hi90_aci", "elevated_threshold"):
+    for c in ("pred_count", "lo80", "hi80", "lo90", "hi90", "lo80_aci", "hi80_aci",
+              "lo90_aci", "hi90_aci", "elevated_threshold"):
         ok |= _fmt(f[c])
-    ok |= _fmt(f["p_elevated"], pct=True)
+    ok |= _fmt(f["p_elevated"], pct=True) | _fmt(f["p_display"], pct=True)
     ok |= {str(int(np.ceil(x))) for x in f["elevated_threshold"].dropna()}  # "N or more"
     ok.add("90")  # the interval's stated level ("90% range"), a label, not a data value
     return ok

@@ -1,13 +1,13 @@
 # WER Table 1 extraction report
 
-Generated 2026-11-02 11:50 UTC by `python -m radar_lk.ingest.parse_wer`.
+Generated 2026-11-03 07:28 UTC by `python -m radar_lk.ingest.parse_wer`.
 Primary data: Epidemiology Unit, Ministry of Health, Sri Lanka (Weekly Epidemiological Report, Table 1). Source files: `data/raw/wer/*.pdf`, listed with hashes in `data/raw/manifest.csv`. Every row in `data/clean/wer.parquet` carries `source_file`, `source_issue` and `extracted_at`.
 
 ## 1. Summary
 
-- PDFs: **244**: parsed **241**, no Table 1 **2**, failed **1**; week overrides applied: **6**
-- District-disease-weeks `extraction_valid` (tier 1): **97.06%** (76,440 of 78,754); target 95% met
-- Of those, `revised` (tier 2: cross-week identity fails, kept with `revision_delta`): **5.3%** of 75,634 checkable rows
+- PDFs: **247**: parsed **244**, no Table 1 **2**, failed **1**; week overrides applied: **6**
+- District-disease-weeks `extraction_valid` (tier 1): **97.10%** (77,532 of 79,846); target 95% met
+- Of those, `revised` (tier 2: cross-week identity fails, kept with `revision_delta`): **5.2%** of 76,726 checkable rows
 - National source errors (districts kept, national row queued): weekly **155**, cumulative **80**
 - Duplicate weeks resolved: **0**
 - Rows in review queue: **2,638** (district 2,314)
@@ -22,9 +22,9 @@ Primary data: Epidemiology Unit, Ministry of Health, Sri Lanka (Weekly Epidemiol
 | 2023 | 52 | 52 | 0 | 0 |
 | 2024 | 52 | 51 | 0 | 1 |
 | 2025 | 52 | 52 | 0 | 0 |
-| 2026 | 33 | 33 | 0 | 0 |
+| 2026 | 36 | 36 | 0 | 0 |
 | unknown | 1 | 0 | 1 | 0 |
-| **total** | 244 | 241 | 2 | 1 |
+| **total** | 247 | 244 | 2 | 1 |
 
 `year` is the year of the week printed in Table 1 for parsed issues, and the volume year (vol + 1973) for issues that did not parse. 2021 and 2011 are out-of-range files that the site lists under 2022 dates.
 
@@ -62,7 +62,7 @@ Each entry exists only where the printed day numbers/weekday, the printed `(Nth 
 
 **Tier 2, `revised`.** The cross-week identity `cum_t = cum_(t-1) + weekly_t` (in a year's first week `cum = weekly`). A failure does **not** remove the row: it sets `revised=True` and `revision_delta = cum_t - (cum_(t-1) + weekly_t)`; `revised` is empty where the previous week is missing. **Weekly counts are kept exactly as printed in that issue** (first-printed). A later issue may raise the cumulative of an earlier week without re-printing the weekly figure, so the radar's weekly series is what a Regional Epidemiologist saw in real time, and `revision_delta` says how much was added afterwards.
 
-District-disease-weeks extracted from parsed issues: **78,754**; extraction_valid: **76,440 = 97.06%**.
+District-disease-weeks extracted from parsed issues: **79,846**; extraction_valid: **77,532 = 97.10%**.
 
 ### Per year
 
@@ -72,32 +72,32 @@ District-disease-weeks extracted from parsed issues: **78,754**; extraction_vali
 | 2023 | 15574 | 650 | 16224 | 96.0 | 15548 | 1460 | 9.4 |
 | 2024 | 16926 | 78 | 17004 | 99.5 | 16588 | 700 | 4.2 |
 | 2025 | 17264 | 338 | 17602 | 98.1 | 17238 | 516 | 3.0 |
-| 2026 | 11180 | 832 | 12012 | 93.1 | 11154 | 100 | 0.9 |
+| 2026 | 12272 | 832 | 13104 | 93.7 | 12246 | 100 | 0.8 |
 
 ### Per disease
 
 | disease | extraction_valid | review | total | % extraction_valid | % revised | median revision_delta | median abs delta |
 |---|---|---|---|---|---|---|---|
-| chickenpox | 5980 | 234 | 6214 | 96.2 | 8.3 | 2.0 | 3.0 |
-| dengue | 6006 | 208 | 6214 | 96.7 | 15.0 | 13.0 | 21.0 |
-| dysentery | 6032 | 182 | 6214 | 97.1 | 4.5 | 1.0 | 2.0 |
-| encephalitis | 6006 | 208 | 6214 | 96.7 | 2.4 | 1.0 | 2.0 |
-| enteric_fever | 6084 | 130 | 6214 | 97.9 | 1.6 | 1.0 | 1.5 |
-| food_poisoning | 6032 | 182 | 6214 | 97.1 | 3.0 | 1.0 | 3.0 |
-| human_rabies | 6084 | 130 | 6214 | 97.9 | 1.1 | 1.0 | 1.0 |
-| leishmaniasis | 6032 | 182 | 6214 | 97.1 | 5.7 | 2.0 | 5.0 |
-| leprosy | 832 | 52 | 884 | 94.1 | 0.0 |  |  |
-| leptospirosis | 6006 | 208 | 6214 | 96.7 | 10.3 | 3.0 | 4.0 |
-| meningitis | 6006 | 208 | 6214 | 96.7 | 5.4 | 1.0 | 2.0 |
-| tuberculosis | 3198 | 104 | 3302 | 96.9 | 3.8 | 1.0 | 8.0 |
-| typhus | 6084 | 130 | 6214 | 97.9 | 4.4 | 1.0 | 2.0 |
-| viral_hepatitis | 6058 | 156 | 6214 | 97.5 | 3.1 | 1.0 | 3.0 |
+| chickenpox | 6058 | 234 | 6292 | 96.3 | 8.2 | 2.0 | 3.0 |
+| dengue | 6084 | 208 | 6292 | 96.7 | 14.8 | 13.0 | 21.0 |
+| dysentery | 6110 | 182 | 6292 | 97.1 | 4.4 | 1.0 | 2.0 |
+| encephalitis | 6084 | 208 | 6292 | 96.7 | 2.4 | 1.0 | 2.0 |
+| enteric_fever | 6162 | 130 | 6292 | 97.9 | 1.5 | 1.0 | 1.5 |
+| food_poisoning | 6110 | 182 | 6292 | 97.1 | 2.9 | 1.0 | 3.0 |
+| human_rabies | 6162 | 130 | 6292 | 97.9 | 1.1 | 1.0 | 1.0 |
+| leishmaniasis | 6110 | 182 | 6292 | 97.1 | 5.6 | 2.0 | 5.0 |
+| leprosy | 910 | 52 | 962 | 94.6 | 0.0 |  |  |
+| leptospirosis | 6084 | 208 | 6292 | 96.7 | 10.1 | 3.0 | 4.0 |
+| meningitis | 6084 | 208 | 6292 | 96.7 | 5.3 | 1.0 | 2.0 |
+| tuberculosis | 3276 | 104 | 3380 | 96.9 | 3.7 | 1.0 | 8.0 |
+| typhus | 6162 | 130 | 6292 | 97.9 | 4.4 | 1.0 | 2.0 |
+| viral_hepatitis | 6136 | 156 | 6292 | 97.5 | 3.1 | 1.0 | 3.0 |
 
 `revision_delta` over all 3,978 revised district rows: median 2, median absolute 4, 90th percentile absolute 112; positive in 79% (the cumulative was raised after the weekly figure was printed).
 
 | group | district rows |
 |---|---|
-| extraction_valid, tier 2 checked, not revised | 71656 |
+| extraction_valid, tier 2 checked, not revised | 72748 |
 | extraction_valid, revised (kept, delta recorded) | 3978 |
 | extraction_valid, tier 2 unknown (previous week missing) | 806 |
 | of all these: note = national_weekly_source_error | 4030 |
@@ -253,7 +253,7 @@ Second rule, `scrambled_weekly_column`: the weekly column is printed against the
 | 2023 | 52 | 1..52 | none |
 | 2024 | 51 | 1..52 | 35 |
 | 2025 | 52 | 1..52 | none |
-| 2026 | 33 | 1..33 | none |
+| 2026 | 36 | 1..36 | none |
 
 Missing weeks are almost entirely issues that failed to parse (section 2: printed-week typos) or that the website does not list.
 
@@ -271,32 +271,32 @@ Values outside 0..100 were set to NaN (the counts of those rows are kept): C\*\*
 
 | area | weeks | C min | C p10 | C median | weeks with a threshold | completeness_low weeks | % low |
 |---|---|---|---|---|---|---|---|
-| Ampara | 239 | 14.0 | 93.0 | 100.0 | 210 | 36 | 17.1 |
-| Anuradhapura | 239 | 42.0 | 87.8 | 100.0 | 210 | 19 | 9.0 |
-| Badulla | 239 | 10.0 | 100.0 | 100.0 | 210 | 14 | 6.7 |
-| Batticaloa | 239 | 10.0 | 99.0 | 100.0 | 210 | 15 | 7.1 |
-| Colombo | 239 | 10.0 | 93.8 | 100.0 | 210 | 21 | 10.0 |
-| Galle | 239 | 10.0 | 99.0 | 100.0 | 210 | 13 | 6.2 |
-| Gampaha | 239 | 7.0 | 72.0 | 100.0 | 210 | 4 | 1.9 |
-| Hambantota | 239 | 10.0 | 99.0 | 100.0 | 210 | 10 | 4.8 |
-| Jaffna | 239 | 80.0 | 88.0 | 93.0 | 210 | 7 | 3.3 |
-| Kalmunai | 239 | 10.0 | 99.0 | 100.0 | 210 | 21 | 10.0 |
-| Kalutara | 230 | 1.0 | 59.5 | 100.0 | 201 | 10 | 5.0 |
-| Kandy | 239 | 10.0 | 97.0 | 100.0 | 210 | 2 | 1.0 |
-| Kegalle | 239 | 10.0 | 99.0 | 100.0 | 210 | 20 | 9.5 |
-| Kilinochchi | 239 | 10.0 | 99.0 | 100.0 | 210 | 16 | 7.6 |
-| Kurunegala | 239 | 10.0 | 97.0 | 100.0 | 210 | 17 | 8.1 |
-| Mannar | 239 | 10.0 | 80.0 | 100.0 | 210 | 10 | 4.8 |
-| Matale | 239 | 10.0 | 99.0 | 100.0 | 210 | 19 | 9.0 |
-| Matara | 239 | 10.0 | 100.0 | 100.0 | 210 | 17 | 8.1 |
-| Monaragala | 239 | 10.0 | 99.0 | 100.0 | 210 | 19 | 9.0 |
-| Mullaitivu | 239 | 10.0 | 94.0 | 100.0 | 210 | 23 | 11.0 |
-| Nuwara Eliya | 239 | 10.0 | 94.0 | 100.0 | 210 | 28 | 13.3 |
-| Polonnaruwa | 239 | 72.0 | 88.0 | 99.0 | 210 | 8 | 3.8 |
-| Puttalam | 239 | 10.0 | 90.0 | 100.0 | 210 | 20 | 9.5 |
-| Ratnapura | 239 | 10.0 | 95.0 | 100.0 | 210 | 8 | 3.8 |
-| Trincomalee | 239 | 10.0 | 91.0 | 100.0 | 210 | 8 | 3.8 |
-| Vavuniya | 239 | 10.0 | 84.6 | 100.0 | 210 | 5 | 2.4 |
+| Ampara | 242 | 14.0 | 93.0 | 100.0 | 213 | 36 | 16.9 |
+| Anuradhapura | 242 | 42.0 | 87.1 | 100.0 | 213 | 20 | 9.4 |
+| Badulla | 242 | 9.0 | 100.0 | 100.0 | 213 | 15 | 7.0 |
+| Batticaloa | 242 | 10.0 | 99.0 | 100.0 | 213 | 16 | 7.5 |
+| Colombo | 242 | 10.0 | 93.1 | 100.0 | 213 | 22 | 10.3 |
+| Galle | 242 | 10.0 | 99.0 | 100.0 | 213 | 16 | 7.5 |
+| Gampaha | 242 | 7.0 | 72.0 | 100.0 | 213 | 5 | 2.3 |
+| Hambantota | 242 | 10.0 | 99.0 | 100.0 | 213 | 10 | 4.7 |
+| Jaffna | 242 | 80.0 | 88.0 | 93.0 | 213 | 7 | 3.3 |
+| Kalmunai | 242 | 10.0 | 99.0 | 100.0 | 213 | 22 | 10.3 |
+| Kalutara | 233 | 1.0 | 56.0 | 100.0 | 204 | 11 | 5.4 |
+| Kandy | 242 | 7.0 | 97.0 | 100.0 | 213 | 3 | 1.4 |
+| Kegalle | 242 | 10.0 | 98.1 | 100.0 | 213 | 23 | 10.8 |
+| Kilinochchi | 242 | 10.0 | 99.0 | 100.0 | 213 | 17 | 8.0 |
+| Kurunegala | 242 | 10.0 | 97.0 | 100.0 | 213 | 18 | 8.5 |
+| Mannar | 242 | 10.0 | 80.0 | 100.0 | 213 | 10 | 4.7 |
+| Matale | 242 | 10.0 | 99.0 | 100.0 | 213 | 22 | 10.3 |
+| Matara | 242 | 10.0 | 100.0 | 100.0 | 213 | 18 | 8.5 |
+| Monaragala | 242 | 10.0 | 99.0 | 100.0 | 213 | 22 | 10.3 |
+| Mullaitivu | 242 | 10.0 | 94.0 | 100.0 | 213 | 24 | 11.3 |
+| Nuwara Eliya | 242 | 10.0 | 94.0 | 100.0 | 213 | 29 | 13.6 |
+| Polonnaruwa | 242 | 18.0 | 88.0 | 99.0 | 213 | 9 | 4.2 |
+| Puttalam | 242 | 10.0 | 90.0 | 100.0 | 213 | 21 | 9.9 |
+| Ratnapura | 242 | 10.0 | 95.0 | 100.0 | 213 | 9 | 4.2 |
+| Trincomalee | 242 | 10.0 | 91.1 | 100.0 | 213 | 8 | 3.8 |
+| Vavuniya | 242 | 10.0 | 83.0 | 100.0 | 213 | 6 | 2.8 |
 
 ### National row, by year (T* shown only to document the 2023-W52 step)
 
@@ -306,28 +306,28 @@ Values outside 0..100 were set to NaN (the counts of those rows are kept): C\*\*
 | 2023 | 52 | 98.0 | 35.5 | 25.0 |
 | 2024 | 51 | 99.0 | 93.0 | 40.0 |
 | 2025 | 52 | 99.0 | 94.0 | 65.0 |
-| 2026 | 33 | 99.0 | 91.0 | 58.0 |
+| 2026 | 36 | 98.5 | 91.0 | 18.0 |
 
 ## 8. What the parser saw
 
-Disease columns per issue: {12: 114, 13: 93, 14: 34} (12 -> 13 with Tuberculosis from Vol 51 No 11 -> 14 with Leprosy from Vol 53 No 1; see docs/LAYOUTS.md).
+Disease columns per issue: {12: 114, 13: 93, 14: 37} (12 -> 13 with Tuberculosis from Vol 51 No 11 -> 14 with Leprosy from Vol 53 No 1; see docs/LAYOUTS.md).
 
 Printed header spellings mapped to each disease (all explicit aliases in `config/sources.yaml`; an unknown spelling is a hard failure):
 
-- dengue: `Dengue Fever` x240, `Dengue` x1
-- dysentery: `Dysentery` x241
-- encephalitis: `Encephalitis` x126, `Encephaliti` x80, `Encephalit` x23, `Encephali` x12
-- enteric_fever: `En. Fever` x127, `Enteric Fever` x100, `Enteric` x11, `Enteric F.` x3
-- food_poisoning: `Food Poi-` x103, `F. Poisoning` x97, `F. Poison-` x30, `Food Poison-` x11
-- leptospirosis: `Leptospirosis` x241
-- typhus: `Typhus` x143, `Typhus F.` x93, `Typhus Fev.` x4, `Typhus Fe-` x1
-- viral_hepatitis: `Viral Hep.` x127, `Viral Hep-` x59, `Viral` x23, `Viral Hepa-` x18, `V. Hep.` x14
-- human_rabies: `Human` x100, `H. Rabiies` x93, `H. Rabies` x34, `H. Rabi.` x14
-- chickenpox: `Chickenpox` x241
-- meningitis: `Meningitis` x241
-- leishmaniasis: `Leishmania-` x205, `Leishman.` x34, `Leishmani-` x1, `Leishmaniasis` x1
-- tuberculosis: `Tuberculosis` x127
-- leprosy: `Leprosy` x34
+- dengue: `Dengue Fever` x243, `Dengue` x1
+- dysentery: `Dysentery` x244
+- encephalitis: `Encephalitis` x129, `Encephaliti` x80, `Encephalit` x23, `Encephali` x12
+- enteric_fever: `En. Fever` x130, `Enteric Fever` x100, `Enteric` x11, `Enteric F.` x3
+- food_poisoning: `Food Poi-` x103, `F. Poisoning` x97, `F. Poison-` x33, `Food Poison-` x11
+- leptospirosis: `Leptospirosis` x244
+- typhus: `Typhus` x146, `Typhus F.` x93, `Typhus Fev.` x4, `Typhus Fe-` x1
+- viral_hepatitis: `Viral Hep.` x130, `Viral Hep-` x59, `Viral` x23, `Viral Hepa-` x18, `V. Hep.` x14
+- human_rabies: `Human` x100, `H. Rabiies` x93, `H. Rabies` x37, `H. Rabi.` x14
+- chickenpox: `Chickenpox` x244
+- meningitis: `Meningitis` x244
+- leishmaniasis: `Leishmania-` x205, `Leishman.` x37, `Leishmani-` x1, `Leishmaniasis` x1
+- tuberculosis: `Tuberculosis` x130
+- leprosy: `Leprosy` x37
 
 Cell-level oddities across all parsed issues: {'blank': 4, 'unreadable': 2, 'pct_format': 32}. T*/C** printed as `8%` or `5.5` in `pct_format` cells are read as numbers. Blank/unreadable count cells put their whole (week, disease) group in review. Issues with such cells: Vol 50 No 52 (0 blank, 1 unreadable); Vol 53 No 8 (1 blank, 0 unreadable); Vol 49 No 7 (0 blank, 1 unreadable); Vol 49 No 17 (1 blank, 0 unreadable); Vol 49 No 38 (2 blank, 0 unreadable).
 
@@ -343,7 +343,7 @@ Footnote text under Table 1 in the parsed issues (digits and dates masked), most
 - x42 (e.g. Vol 50 No 46): `Source: Weekly Returns of Communicable Diseases (esurvillance.epid.gov.lk). T=Timeliness refers to returns received on or before <date> Total number of reporting units N Number of reporting units data provided for the current week: 358C**-Completeness * A = Cases reported during the current week. B = Cumulative cases for the yea`
 - x31 (e.g. Vol 50 No 22): `Source: Weekly Returns of Communicable Diseases (esurvillance.epid.gov.lk). T=Timeliness refers to returns received on or before <date> Total number of reporting units N Number of reporting units data provided for the current week: N C**-Completeness * A = Cases reported during the current week. B = Cumulative cases for the year`
 - x22 (e.g. Vol 52 No 31): `Source: Weekly Returns of Communicable Diseases (esurvillance.epid.gov.lk). T=Timeliness refers to returns received on or before <date> Total number of reporting units N Number of reporting units data provided for the current week: N. C**-Completeness * A = Cases reported during the current week. B = Cumulative cases for the yea`
-- x19 (e.g. Vol 53 No 15): `Source: WRCD module of the EPINET. T*=Timeliness refers to returns received on or before <date>. Total number of reporting units N C**-Completeness; A = Cases reported during the current week; B = Cumulative cases for the year. C**-Completeness;`
+- x22 (e.g. Vol 53 No 15): `Source: WRCD module of the EPINET. T*=Timeliness refers to returns received on or before <date>. Total number of reporting units N C**-Completeness; A = Cases reported during the current week; B = Cumulative cases for the year. C**-Completeness;`
 - x10 (e.g. Vol 52 No 20): `Source: Weekly Returns of Communicable Diseases (esurvillance.epid.gov.lk). T=Timeliness refers to returns received on or before <date> Total number of reporting units N Number of reporting units data provided for the current week: 360C**-Completeness * A = Cases reported during the current week. B = Cumulative cases for the yea`
 - x7 (e.g. Vol 53 No 2): `Source: WRCD module of the EPINET. T*=Timeliness refers to returns received on or before <date>. Total number of reporting units N. Data provided for the current week: N. C**-Completeness; A = Cases reported during the current week; B = Cumulative cases for the year.`
 - x5 (e.g. Vol 51 No 1): `Source: Weekly Returns of Communicable Diseases (esurvillance.epid.gov.lk). T=Timeliness refers to returns received on or before <date> Total number of reporting units N Number of reporting units data provided for the current week: 356C**-Completeness * A = Cases reported during the current week. B = Cumulative cases for the yea`

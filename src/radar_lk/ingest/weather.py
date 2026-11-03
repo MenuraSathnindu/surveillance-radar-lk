@@ -112,6 +112,8 @@ def run(start: str = "2021-01-01", end: str | None = None) -> pd.DataFrame:
     frames, fails = [], 0
     fetched_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     requested = 0
+    stale: list[str] = []
+    missing: set[str] = set()
     for _, p in pts.iterrows():
         cache = out_dir / f"{p['rdhs'].replace(' ', '_')}.json"
         j = None
@@ -135,20 +137,34 @@ def run(start: str = "2021-01-01", end: str | None = None) -> pd.DataFrame:
             if requested:
                 time.sleep(delay)
             requested += 1
-            try:
-                j = fetch_point(session, p["lat"], p["lon"], start, end)
-            except requests.RequestException as e:
-                j = e
+            for attempt in (1, 2):  # one retry after a pause (timeouts happen under load)
+                try:
+                    j = fetch_point(session, p["lat"], p["lon"], start, end)
+                    break
+                except requests.RequestException as e:
+                    j = e
+                    if attempt == 1:
+                        print(f"  {p['rdhs']}: {e}; retrying once in {BACKOFF:.0f} s")
+                        time.sleep(BACKOFF)
+        area_end = end
         if isinstance(j, requests.RequestException):
             e = j
             fails += 1
             print(f"  [fail {fails}/{MAX_CONSECUTIVE_FAILURES}] {p['rdhs']}: {e}")
             if fails >= MAX_CONSECUTIVE_FAILURES:
                 raise SystemExit("[stop] consecutive failures; not hammering the API") from e
-            continue
-        fails = 0
-        j["_request"] = want
-        cache.write_text(json.dumps(j), encoding="utf-8")
+            if not cache.exists():
+                missing.add(p["rdhs"])
+                continue
+            # keep the last good answer for this point (complete up to its own end date) rather
+            # than dropping the district from the weather table
+            j = json.loads(cache.read_text(encoding="utf-8"))
+            area_end = (j.get("_request") or {}).get("end") or j["daily"]["time"][-1]
+            stale.append(f"{p['rdhs']} (to {area_end})")
+        else:
+            fails = 0
+            j["_request"] = want
+            cache.write_text(json.dumps(j), encoding="utf-8")
         d = pd.DataFrame({"date": j["daily"]["time"], **{k: j["daily"][k] for k in DAILY}})
         w = weekly(d)
         w["area"] = p["rdhs"]
@@ -157,13 +173,18 @@ def run(start: str = "2021-01-01", end: str | None = None) -> pd.DataFrame:
         w["point_source"] = p.get("point_source", "")
         w["grid_lat"], w["grid_lon"] = j["latitude"], j["longitude"]
         w["elevation_m"] = j.get("elevation")
+        w["as_of"] = area_end
         frames.append(w)
         print(f"  {p['rdhs']}: {len(w)} weeks")
     df = pd.concat(frames, ignore_index=True)
     df["source"] = ATTRIBUTION
     df["source_url"] = API
     df["fetched_at"] = fetched_at
-    df["as_of"] = end
+    if missing:
+        # never overwrite a complete weather table with one that lacks districts
+        raise SystemExit(f"[stop] no weather at all for {sorted(missing)}; weather.parquet kept")
+    if stale:
+        print(f"  WARNING: fetch failed, last good data kept for: {', '.join(stale)}")
     cols = [
         "week_start",
         "week_end",

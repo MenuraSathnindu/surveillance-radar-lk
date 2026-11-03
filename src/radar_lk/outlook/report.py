@@ -295,6 +295,42 @@ def headline_table(tr: pd.DataFrame, disease: str, cfg) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def display_section(a: pd.DataFrame) -> list[str]:
+    """Disclosed post-hoc display change: calibrated baseline probabilities (test origins)."""
+    t = a[(a["scope"] == TEST) & a["model"].isin(["persistence", "climatology"])]
+    w = t.pivot_table(index="h", columns="model", values=["Brier", "Brier (display)"])
+    rows = pd.DataFrame(
+        {
+            "h": w.index,
+            "persistence Brier (0/1, as evaluated)": w[("Brier", "persistence")].to_numpy(),
+            "persistence Brier (calibrated display)": w[
+                ("Brier (display)", "persistence")
+            ].to_numpy(),
+            "climatology Brier (as evaluated)": w[("Brier", "climatology")].to_numpy(),
+            "climatology Brier (calibrated display)": w[
+                ("Brier (display)", "climatology")
+            ].to_numpy(),
+        }
+    )
+    return [
+        "### Baseline probabilities as displayed (post-hoc display change, disclosed)",
+        "",
+        "Persistence gives a 0/1 probability and climatology a frequency over one to four past "
+        "years, so where they are the selected model the dashboard would print 0% or 100%. "
+        "**After model selection and evaluation**, the displayed probability of these two "
+        "baselines was changed to an empirical frequency estimated past-only (expanding window, "
+        "per disease and horizon, from earlier forecasts whose target was already reported): "
+        "persistence shows P(elevated at t+h | elevated status at t), Laplace-smoothed; "
+        "climatology shows the district's own past frequency at that time of year, smoothed with "
+        "two pseudo-weeks at the 20% base rate. The selected model at each horizon is unchanged, "
+        "and every other number in this report (selection, BSS, reliability) still uses the "
+        "probabilities as evaluated. Brier on the test origins (2025-26), lower is better:",
+        "",
+        md(rows),
+        "",
+    ]
+
+
 def aci_section(a: pd.DataFrame, sel: pd.DataFrame, cfg) -> list[str]:
     """Static vs adaptive (ACI) count-interval coverage for the selected count models."""
     pick = sel.set_index("h")["selected count model"]
@@ -375,7 +411,9 @@ def write(cfg, fc: pd.DataFrame, tr: pd.DataFrame, lives: dict) -> None:
         "sqrt(pred + 1), pool = the last 52 origins with observed targets, same model and "
         "horizon (80% and 90%). Probabilities (GLM and LightGBM): inductive **Venn-Abers** "
         "(`venn-abers` package) on the same pool; `p_elevated` is the calibrated probability "
-        "and [`p_lo`, `p_hi`] its Venn-Abers range. Baselines keep their own probability.",
+        "and [`p_lo`, `p_hi`] its Venn-Abers range. Baselines keep their own probability for "
+        "evaluation; the dashboard shows them calibrated (see 'Baseline probabilities as "
+        "displayed').",
         "- Skill: MASE = MAE / persistence MAE on the same rows; BSS = 1 - Brier / reference "
         "Brier; recall and precision at p >= 0.5. Every model is scored on the same "
         "district-weeks.",
@@ -486,6 +524,7 @@ def write(cfg, fc: pd.DataFrame, tr: pd.DataFrame, lives: dict) -> None:
             "the range only in a tooltip, labelled 'calibration range'.",
             "",
         ]
+        out += display_section(a)
         out += aci_section(a, sel, cfg)
         y26 = a[(a["scope"] == "2026 targets") & a["h"].isin(headline_h(cfg))]
         out += [

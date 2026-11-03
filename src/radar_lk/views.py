@@ -163,22 +163,25 @@ def kpis(x: pd.DataFrame) -> dict:
 
 def outlook_at(fc: pd.DataFrame, disease: str, week: str, L: int) -> pd.DataFrame:
     """Per district at origin `week`: P(elevated) and count forecast from the selected models at
-    h = 1, 2, L+1, L+2; elevated now; emerging / persistent label."""
+    h = 1, 2, L+1, L+2; elevated now; emerging / persistent label. The probability shown is
+    `p_display` (baselines calibrated past-only for display; see outlook.backtest)."""
     f = fc[(fc["disease"] == disease) & (fc["origin_week"] == week)]
     if f.empty:
         return pd.DataFrame()
     aci = f["interval_method"].iloc[0] == "aci"
-    lo, hi = ("lo90_aci", "hi90_aci") if aci else ("lo90", "hi90")
+    sfx = "_aci" if aci else ""
+    pcol = "p_display" if "p_display" in f.columns else "p_elevated"
     pc = f[f["dashboard_class"]][
-        ["area", "h", "model", "p_elevated", "p_lo", "p_hi", "target_week", "elevated_threshold"]
-    ]
-    cc = f[f["dashboard_count"]][["area", "h", "model", "pred_count", lo, hi, "observed"]]
-    cc = cc.rename(columns={"model": "count_model", lo: "lo90", hi: "hi90"})
+        ["area", "h", "model", pcol, "p_lo", "p_hi", "target_week", "elevated_threshold"]
+    ].rename(columns={pcol: "p_elevated"})
+    iv = [f"{a}{k}{sfx}" for k in (80, 90) for a in ("lo", "hi")]
+    cc = f[f["dashboard_count"]][["area", "h", "model", "pred_count", *iv, "observed"]]
+    cc = cc.rename(columns={"model": "count_model", **{c: c.replace(sfx, "") for c in iv}})
     o = pc.merge(cc, on=["area", "h"])
     now = f[(f["model"] == "persistence") & (f["h"] == 1)][["area", "p_elevated", "source_issue"]]
     now = now.rename(columns={"p_elevated": "elevated_now"})
     o = o.merge(now, on="area", how="left")
-    o["interval"] = "ACI 90%" if aci else "90%"
+    o["interval"] = "adaptive (ACI)" if aci else "split-conformal"
     return o[o["h"].isin([1, 2, L + 1, L + 2])]
 
 
@@ -199,6 +202,8 @@ def outlook_wide(o: pd.DataFrame, L: int) -> pd.DataFrame:
                 r[f"count_{name}"] = float(g.at[h, "pred_count"])
                 r[f"lo_{name}"] = float(g.at[h, "lo90"])
                 r[f"hi_{name}"] = float(g.at[h, "hi90"])
+                r[f"lo80_{name}"] = float(g.at[h, "lo80"])
+                r[f"hi80_{name}"] = float(g.at[h, "hi80"])
                 r[f"week_{name}"] = g.at[h, "target_week"]
                 r[f"model_{name}"] = g.at[h, "model"]
                 r[f"cmodel_{name}"] = g.at[h, "count_model"]

@@ -4,7 +4,7 @@
 # Checked by running every page with those libraries blocked from import.
 streamlit==1.66.1
 pandas==3.1.0
-numpy==2.5.4
+numpy==2.4.6          # 2.5 has no Python 3.11 wheels; pandas 3.1 needs numpy>=2.0.2
 pyarrow==26.0.0
 plotly==7.1.0
 PyYAML==6.0.3

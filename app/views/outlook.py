@@ -48,6 +48,14 @@ tr = tr[(tr["disease"] == dis)].drop_duplicates("h").set_index("h")
 NAMES = {"persistence": "Persistence", "climatology": "Seasonal climatology",
          "glm": "NB GLM / logistic", "lightgbm": "LightGBM"}  # fmt: skip
 
+def _iv(r, k: str) -> str:
+    """Expected count with the 80% range, plus the 90% range (tooltip only)."""
+    return (
+        f"expected {r[f'count_{k}']:.0f} cases, 80% range {r[f'lo80_{k}']:.0f}-"
+        f"{r[f'hi80_{k}']:.0f}, 90% range {r[f'lo_{k}']:.0f}-{r[f'hi_{k}']:.0f}"
+    )
+
+
 # ranked bar: P(elevated) next week (proposal 7.3); calibration range only in the tooltip
 o = o.sort_values("p_next", ascending=True)
 col = [common.COLOR["alert"] if p >= 0.5 else common.COLOR["early_warning"] for p in o["p_next"]]
@@ -66,20 +74,20 @@ fig = go.Figure(
                     for a, b in zip(o["plo_next"], o["phi_next"], strict=True)
                 ],
                 o["model_next"].map(NAMES),
-                o["count_next"],
-                o["lo_next"],
-                o["hi_next"],
+                [_iv(r, "next") for _, r in o.iterrows()],
+                [_iv(r, "this") for _, r in o.iterrows()],
                 o["pattern"].replace("", "-"),
                 o["source_issue"],
                 strict=True,
             )
         ),
         hovertemplate=(
-            "<b>%{y}</b>: %{x:.0f}% chance of an elevated week<br>"
+            "<b>%{y}</b>: %{x:.0f}% chance of an elevated week next week<br>"
             "%{customdata[0]} · model: %{customdata[1]}<br>"
-            "expected %{customdata[2]:.0f} cases (90%: %{customdata[3]:.0f}-%{customdata[4]:.0f})"
-            "<br>pattern: %{customdata[5]}<br>"
-            f"from WER %{{customdata[6]}}, {week}<extra></extra>"
+            f"next week ({next_w}): %{{customdata[2]}}<br>"
+            f"this week ({this_w}): %{{customdata[3]}}<br>"
+            "pattern: %{customdata[4]}<br>"
+            f"from WER %{{customdata[5]}}, {week}<extra></extra>"
         ),
     )
 )
@@ -107,7 +115,7 @@ with right:
         return f"{100 * x:.0f}%" if pd.notna(x) else ""
 
     def cnt(r, k):
-        return f"{r[f'count_{k}']:.0f} ({r[f'lo_{k}']:.0f}-{r[f'hi_{k}']:.0f})"
+        return f"{r[f'count_{k}']:.0f} ({r[f'lo80_{k}']:.0f}-{r[f'hi80_{k}']:.0f})"
 
     tab = pd.DataFrame(
         {
@@ -117,7 +125,8 @@ with right:
             f"Next week {next_w}": [p(x) for x in t["p_next"]],
             "Week +1": [p(x) for x in t["p_h1"]],
             "Week +2": [p(x) for x in t["p_h2"]],
-            "Expected cases this week (90%)": [cnt(r, "this") for _, r in t.iterrows()],
+            "Expected this week (80% range)": [cnt(r, "this") for _, r in t.iterrows()],
+            "Expected next week (80% range)": [cnt(r, "next") for _, r in t.iterrows()],
             "Threshold": t["threshold"].round(0).astype(int),
             "Source": [f"WER {s}, {week}" for s in t["source_issue"]],
         }
@@ -130,6 +139,10 @@ with right:
             "Pattern": st.column_config.TextColumn(
                 help="Persistent: elevated now and forecast elevated. Emerging: not elevated now "
                 "but forecast elevated (this or next week). Easing: elevated now, not forecast."
+            ),
+            "Expected next week (80% range)": st.column_config.TextColumn(
+                help="Expected weekly cases and the range that should contain the count 8 times "
+                "in 10. The 90% range is in the chart tooltip."
             ),
             "Threshold": st.column_config.NumberColumn(
                 help="Cases per week counted as elevated for this district (80th percentile)."
@@ -165,7 +178,9 @@ with right:
             "2026 is an outlier year for dengue (a large epidemic). On 2026 targets the selected "
             f"count models' 90% intervals covered {(sel['coverage90 %'] * w).sum():.0f}% of "
             f"weeks (static) and {(sel['coverage90 ACI %'] * w).sum():.0f}% with adaptive "
-            "conformal, against 90% intended. Read 2026 dengue ranges with care.",
+            "conformal, against 90% intended. Read 2026 dengue ranges with care: ranges are "
+            "very wide when recent forecasts have missed often. 2026 is an epidemic year; "
+            "ranges widened automatically after misses.",
             icon=":material/warning:",
         )
 
