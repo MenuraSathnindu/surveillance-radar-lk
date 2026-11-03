@@ -53,18 +53,18 @@ status-quo rule. Censored first alerts are excluded from the comparison.
 
 | number | value | meaning | source |
 |---|---|---|---|
-| Decision | **Adopted.** The rule (fixed before running) was union null false alerts ≤ 5 per 100 AND median replay gain ≥ 0. | `alert` = NB-GLM above its 98% bound; `early_warning` = EARS C2 > 3 while NB-GLM is silent. Thresholds were not re-tuned. | `docs/RADAR_BACKTEST.md` §d2; `config/sources.yaml` `radar_display.tiers_adopted` |
-| Null false alerts | alert **2.0**, early warning **1.8**, union **3.8** per 100 | What a user sees with no outbreak: under 4 per 100 district-weeks, against 13.7 for today's rule. Dengue (9.3) and leptospirosis (7.3) are higher than the pooled figure. | `docs/RADAR_BACKTEST.md` §d2 |
-| Sensitivity (default thresholds) | alert **49.0%**, union **61.0%** | The early-warning tier adds 12 points of sensitivity. | `docs/RADAR_BACKTEST.md` §d2 |
-| Union sensitivity by size | 1 SD **22.5%**, 2 SD **38.9%**, 3 SD **45.5%**, 4 SD **55.7%** | Not matched: the union runs at a higher false-alert rate than §2's 1 / 100 figures. | `docs/RADAR_BACKTEST.md` §d2 |
-| Replay first signal | **31** early warning, **27** alert (58 district-events signalled out of 67) | In real events the early-warning tier usually speaks first. | `docs/RADAR_BACKTEST.md` §d2 |
+| Two-tier decision | **Adopted.** The rule (fixed before running) was union null false alerts ≤ 5 per 100 AND median replay gain ≥ 0. | `alert` = NB-GLM above its 98% bound; `early_warning` = EARS C2 > 3 while NB-GLM is silent. Thresholds were not re-tuned. | `docs/RADAR_BACKTEST.md` §d2; `config/sources.yaml` `radar_display.tiers_adopted` |
+| Two-tier null false alerts | alert **2.0**, early warning **1.8**, union **3.8** per 100 | What a user sees with no outbreak: under 4 per 100 district-weeks, against 13.7 for today's rule. Dengue (9.3) and leptospirosis (7.3) are higher than the pooled figure. | `docs/RADAR_BACKTEST.md` §d2 |
+| Two-tier sensitivity | alert **49.0%**, union **61.0%** | The early-warning tier adds 12 points of sensitivity. | `docs/RADAR_BACKTEST.md` §d2 |
+| Two-tier sensitivity by outbreak size | 1 SD **22.5%**, 2 SD **38.9%**, 3 SD **45.5%**, 4 SD **55.7%** | Not matched: the union runs at a higher false-alert rate than §2's 1 / 100 figures. | `docs/RADAR_BACKTEST.md` §d2 |
+| Two-tier first signal in the replay | **31** early warning, **27** alert (58 district-events signalled out of 67) | In real events the early-warning tier usually speaks first. | `docs/RADAR_BACKTEST.md` §d2 |
 
 ## 5. Completeness gating
 
 | number | value | meaning | source |
 |---|---|---|---|
 | Revision after a held-back vs kept alert | next week revised **21% vs 9%**; cumulative raised **19% vs 6%** | Low-completeness weeks really are incomplete: late reports arrive. | `docs/RADAR_BACKTEST.md` §e |
-| Persistence | next 2 weeks above expected **52% vs 48%** (618 held-back vs 13,042 kept alerts) | Held-back alerts are as real as kept ones. Gating does not remove false alerts; the proposal's target is not met. Held-back alerts are therefore shown greyed out with their completeness, never hidden. | `docs/RADAR_BACKTEST.md` §e |
+| Held-back alerts that persisted | next 2 weeks above expected **52% vs 48%** (618 held-back vs 13,042 kept alerts) | Held-back alerts are as real as kept ones. Gating does not remove false alerts; the proposal's target is not met. Held-back alerts are therefore shown greyed out with their completeness, never hidden. | `docs/RADAR_BACKTEST.md` §e |
 
 ## 6. External concordance: radar vs NDCU dengue high-risk lists (2026, weeks 1–33)
 
@@ -74,28 +74,32 @@ means ≥ 3 of the district's MOH areas are on the list; NB-GLM; 780 district-we
 
 | number | value | meaning | source |
 |---|---|---|---|
-| Agreement / kappa | **79.9%**, κ **0.41** | Moderate agreement beyond chance. | `docs/RADAR_BACKTEST.md` §f |
+| Radar vs NDCU agreement / kappa | **79.9%**, κ **0.41** | Moderate agreement beyond chance. | `docs/RADAR_BACKTEST.md` §f |
 | Radar alerts NDCU also flagged | **65.7%** | Two thirds of radar dengue alerts fall in districts NDCU also lists that week. | `docs/RADAR_BACKTEST.md` §f |
 | NDCU onsets caught within ±4 weeks | **22 of 35**; median lag **0 weeks** | When the radar catches an NDCU onset, it does so in the same week. | `docs/RADAR_BACKTEST.md` §f |
 | NDCU-only weeks explained | **64%** of the 111 are labelled "High burden, within expected range" | The dashboard reconciles the two: high for the district, but normal for the season. | `docs/RADAR_BACKTEST.md` §f |
 
 ## 7. Outlook (district level: leptospirosis primary, dengue secondary)
 
-Rolling-origin backtest over 137 test origins (2024-W01 to 2026-W32) × 26 districts, refitted
-every 4 weeks, past-only. The origin t is the latest reported week. With the publication lag
-L = 8 weeks, h = 9 is "this week" and h = 10 is "next week" at the time of use; h = 1, 2 are the
-proposal's horizons. "Elevated" means the count is at or above the district's own 80th percentile
-of the 104 weeks before t. BSS = Brier skill score; MASE = MAE divided by persistence's MAE.
+Rolling-origin backtest, refitted every 4 weeks, past-only, 26 districts. **Models are selected
+on 2024 origins only** (counts by MASE, probabilities by Brier; within 0.01 the simpler model
+wins). **Every number below is on the untouched test: origins 2025-W01 to 2026-W32**, unless it
+says otherwise. The origin t is the latest reported week. With the publication lag L = 8 weeks,
+h = 9 is "this week" and h = 10 is "next week" at the time of use; h = 1, 2 are the proposal's
+horizons. "Elevated" means at or above the district's own 80th percentile of the 104 weeks before
+t. BSS = Brier skill score; MASE = MAE divided by persistence's MAE.
+
+At h=9–10 the skill over seasonal climatology is small, so the outlook is mainly a calibrated seasonal expectation.
 
 | number | value | meaning | source |
 |---|---|---|---|
-| Leptospirosis: LightGBM vs persistence | beats it on **both** targets at **all 10** horizons | Under the stop rule, the dashboard uses LightGBM at every horizon. | `docs/OUTLOOK_BACKTEST.md` Leptospirosis, "Stop rule" |
-| Leptospirosis, h=1 / 2 | LightGBM BSS **0.35 / 0.35**, MASE **0.94 / 0.92**; AUROC **0.75 / 0.73** | For the weeks already over but not yet reported, the probability is about a third better than "same as the last report", and counts are 6–8% closer. | same, "Headline" and "Elevated, every horizon" |
-| Leptospirosis, this week / next week (h=9 / 10) | LightGBM BSS **0.47 / 0.47**, MASE **0.75 / 0.73** | At the time of use, the outlook halves persistence's probability error and cuts its count error by a quarter. Most of that skill is seasonal: BSS against seasonal climatology is only **0.05** at h=9 and h=10. | same |
-| Leptospirosis, 90% interval coverage | **91–94%** at every headline horizon (80%: **81–84%**) | Split-conformal count intervals hold their stated coverage. Mean width of the 90% interval: **15–18 cases**. | same, "Counts, every horizon" |
-| Leptospirosis, best model | NB GLM / logistic is slightly ahead of LightGBM at every headline horizon (h=1 BSS **0.38** vs 0.35) | The simple, interpretable model is at least as good. | same, "Headline" |
+| Leptospirosis: selected models | probability: **NB GLM / logistic** at all 10 horizons; counts: **GLM** at h=1–6, **LightGBM** at h=7–10 | Chosen on 2024 origins. The GLM tied or beat LightGBM on probability, and the simpler model was kept. | `docs/OUTLOOK_BACKTEST.md` Leptospirosis, "Model selection" |
+| Leptospirosis, h=1 / 2 (test) | BSS **0.40 / 0.42**, MASE **0.92 / 0.89**, AUROC **0.76 / 0.75** | For the weeks already over but not yet reported, the probability is about 40% better than "same as the last report", and counts are 8–11% closer. | same, "How the selected models do on the untouched test" |
+| Leptospirosis, this week / next week (h=9 / 10, test) | BSS **0.52 / 0.50**, MASE **0.76 / 0.75**; BSS over climatology only **0.02 / 0.01** | At the time of use the outlook halves persistence's probability error and cuts its count error by a quarter, but almost all of that is the seasonal pattern. | same |
+| Leptospirosis, 90% interval coverage (test) | **93.5%** (80%: **83.2%**), static split-conformal | The intervals are slightly conservative. ACI was not adopted: in 2026 it brought 90% coverage from 93.3% to 91.5%, but 80% did not move closer to nominal (82.7% to 82.8%). | same, "Count intervals" |
 | Rainfall lag | leptospirosis risk rises **about 6 weeks** after a very wet week in the model; in the raw data the excess peaks at **4 weeks** (**1.8×** the share elevated) | Rain at lags 3–7 weeks pushes P(elevated) up. This is an association, not proof of cause. | same, "Rainfall lag"; `docs/figures/outlook_leptospirosis_rain_lag.png` |
 | Top leptospirosis drivers (LightGBM, P(elevated)) | the district's own threshold, humidity (lags 2–4), district, temperature, season, rain at lags 4–6 | Weather relative to the target week matters, alongside place and season. | same, "What drives LightGBM" |
-| Dengue: stop rule | LightGBM loses to persistence on **counts at h=1–5** (MASE **1.71** at h=1), so the dashboard shows **persistence** counts there. It beats persistence on the **elevated** probability at every horizon. | During dengue's 2026 epidemic the last report is the best count guide for the next weeks. | `docs/OUTLOOK_BACKTEST.md` Dengue, "Stop rule" |
-| Dengue 2026, 90% coverage | only **65–76%** for LightGBM / GLM in 2026 (all years **89–91%**) | The epidemic year broke the past-only calibration: intervals were too narrow. | same, "2026 separately" |
-| Dengue vs NDCU (h=1, ≥ 3 MOH areas) | agreement **80.3%**, κ **0.50**; **66%** of NDCU-flagged district-weeks were forecast elevated, and **60%** of forecasts were NDCU-flagged | The short-horizon dengue outlook agrees with NDCU's lists about as well as the observed elevated flag does (κ 0.29). Agreement falls at h=9 / 10 (κ **0.35 / 0.30**). | same, "Dengue: 2026 forecasts vs NDCU" |
+| Dengue: selected models | counts: **persistence** at h=1–5, **GLM** at h=6–9, **climatology** at h=10; probability: **persistence** at h=1, 2, 4, **GLM** at h=3, **climatology** at h=5–10 | On 2024 origins nothing beat the simple baselines for dengue by more than 0.01. | `docs/OUTLOOK_BACKTEST.md` Dengue, "Model selection" |
+| Dengue, what selection cost on the test | at h=1 LightGBM would have scored BSS **0.16** against the selected persistence's 0; at h=9 **0.30** against climatology's **0.25** | Choosing on 2024 alone did not anticipate the 2026 epidemic. The selection rule is kept because it was fixed before seeing the test. | same, "How the selected models do on the untouched test" |
+| Dengue 2026, count interval coverage | static 80/90%: **62.7 / 72.6%**; adaptive (ACI): **72.7 / 83.5%** | The epidemic year broke the past-only calibration. ACI brings coverage closer to nominal and is used on the dashboard for dengue, but its 90% intervals are about three times as wide (mean **197** vs **65** cases). | same, "Count intervals" |
+| Dengue vs NDCU (h=1, ≥ 3 MOH areas, selected model) | agreement **61.0%**, κ **0.29**; **92%** of NDCU-flagged district-weeks were forecast elevated, but only **39%** of forecasts were NDCU-flagged | At h=1 the selected model is persistence, so it matches the observed elevated flag (κ 0.29). At h=9–10 (climatology) agreement drops to κ **0.00**. | same, "Dengue: 2026 forecasts vs NDCU" |

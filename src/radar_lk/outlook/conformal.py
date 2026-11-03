@@ -74,3 +74,43 @@ def rolling_venn_abers(origin, p_raw, label, h, window, min_n):
         idx = np.flatnonzero(test)[good]
         p_cal[idx], lo[idx], hi[idx] = pp[:, 1], p01[:, 0], p01[:, 1]
     return p_cal, lo, hi
+
+
+def rolling_aci(origin, pred, y, h, levels, window, min_n, gamma):
+    """Adaptive conformal inference (Gibbs & Candes 2021) on top of the rolling split-conformal
+    pool, for one model x horizon. For each level the working miscoverage a starts at 1 - level
+    and is updated online from past-only misses: when the forecasts issued at origin o - h are
+    resolved (their target is reported at origin o), a <- a + gamma * sum(1 - level - miss_i)
+    over those forecasts (per observation, gamma fixed a priori). The interval at origin o uses
+    the ceil((n + 1)(1 - a)) / n quantile of the pool scores, with a clipped so the interval stays
+    finite (between the smallest and the largest past score).
+    Returns {level: (lo, hi, a_used)}."""
+    origin, pred, y = (np.asarray(v, float) for v in (origin, pred, y))
+    score = np.abs(y - pred) / np.sqrt(np.clip(pred, 0, None) + 1)
+    w_all = np.sqrt(np.clip(pred, 0, None) + 1)
+    out = {}
+    for lv in levels:
+        target = 1 - lv
+        a = target
+        lo, hi = np.full(len(pred), np.nan), np.full(len(pred), np.nan)
+        used = np.full(len(pred), np.nan)
+        issued: dict[float, np.ndarray] = {}
+        for o, test, pool in _pools(origin, h, window):
+            back = issued.pop(o - h, None)
+            if back is not None:
+                ok = back[~np.isnan(lo[back]) & ~np.isnan(y[back])]
+                miss = (y[ok] < lo[ok]) | (y[ok] > hi[ok])
+                a += gamma * float(np.sum(target - miss))
+            idx = np.flatnonzero(test)
+            issued[o] = idx
+            used[idx] = a
+            s = np.sort(score[pool & ~np.isnan(score)])
+            n = len(s)
+            if n < min_n:
+                continue
+            k = min(max(math.ceil((n + 1) * (1 - a)), 1), n)
+            q = s[k - 1]
+            lo[idx] = np.maximum(pred[idx] - q * w_all[idx], 0)
+            hi[idx] = pred[idx] + q * w_all[idx]
+        out[lv] = (lo, hi, used)
+    return out

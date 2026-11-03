@@ -19,6 +19,9 @@ LABEL = {
     "lightgbm": "LightGBM",
 }
 MODELS = list(LABEL)
+TEST = "test (2025-26 origins)"
+SELECT = "select (2024 origins)"
+TEST_FROM = "2025-W01"
 COLOR = {
     "climatology": "#2a78d6",
     "glm": "#eb6834",
@@ -83,7 +86,7 @@ def h_name(h: int, cfg) -> str:
 
 def skill_figure(tr: pd.DataFrame, disease: str, path, cfg) -> None:
     plt = _plt()
-    a = tr[(tr["scope"] == "all") & (tr["disease"] == disease)]
+    a = tr[(tr["scope"] == TEST) & (tr["disease"] == disease)]
     fig, axes = plt.subplots(1, 2, figsize=(10, 3.8), dpi=150)
     fig.patch.set_facecolor(SURF)
     for ax, col, ttl, ref in (
@@ -103,7 +106,10 @@ def skill_figure(tr: pd.DataFrame, disease: str, path, cfg) -> None:
     axes[0].legend(frameon=False, fontsize=8, labelcolor=INK2)
     axes[1].text(cfg["L"] + 0.6, axes[1].get_ylim()[1], " now", color=INK2, fontsize=8, va="top")
     fig.suptitle(
-        f"{disease}: skill by horizon (dashed = persistence)", x=0.01, ha="left", fontsize=11
+        f"{disease}: skill by horizon, test origins 2025-26 (dashed = persistence)",
+        x=0.01,
+        ha="left",
+        fontsize=11,
     )
     fig.tight_layout()
     fig.savefig(path, facecolor=SURF)
@@ -112,7 +118,12 @@ def skill_figure(tr: pd.DataFrame, disease: str, path, cfg) -> None:
 
 def reliability_figure(fc: pd.DataFrame, disease: str, path, cfg) -> pd.DataFrame:
     plt = _plt()
-    e = fc[(fc["disease"] == disease) & (fc["kind"] == "backtest") & fc["elevated_obs"].notna()]
+    e = fc[
+        (fc["disease"] == disease)
+        & (fc["kind"] == "backtest")
+        & (fc["origin_week"] >= TEST_FROM)
+        & fc["elevated_obs"].notna()
+    ]
     hs = headline_h(cfg)
     fig, axes = plt.subplots(1, len(hs), figsize=(12, 3.4), dpi=150, sharey=True)
     fig.patch.set_facecolor(SURF)
@@ -138,7 +149,7 @@ def reliability_figure(fc: pd.DataFrame, disease: str, path, cfg) -> pd.DataFram
     axes[0].set_ylabel("observed share elevated", color=INK2, fontsize=8)
     axes[0].legend(frameon=False, fontsize=7, labelcolor=INK2, loc="upper left")
     fig.suptitle(
-        f"{disease}: reliability, backtest 2024 onwards (bins with >= 10 forecasts)",
+        f"{disease}: reliability, test origins 2025-26 (bins with >= 10 forecasts)",
         x=0.01, ha="left", fontsize=11,
     )  # fmt: skip
     fig.tight_layout()
@@ -270,12 +281,8 @@ def ndcu_check(fc: pd.DataFrame, cfg) -> pd.DataFrame:
 # ------------------------------------------------------------------ document
 
 
-def _lost(count_ok: bool, class_ok: bool) -> str:
-    return " and ".join(w for w, ok in (("count", count_ok), ("class", class_ok)) if not ok)
-
-
 def headline_table(tr: pd.DataFrame, disease: str, cfg) -> pd.DataFrame:
-    a = tr[(tr["scope"] == "all") & (tr["disease"] == disease) & tr["h"].isin(headline_h(cfg))]
+    a = tr[(tr["scope"] == TEST) & (tr["disease"] == disease) & tr["h"].isin(headline_h(cfg))]
     rows = []
     for m in MODELS:
         r = {"model": LABEL[m]}
@@ -286,6 +293,44 @@ def headline_table(tr: pd.DataFrame, disease: str, cfg) -> pd.DataFrame:
             r[f"{h_name(h, cfg)} cov90 %"] = g["coverage90 %"]
         rows.append(r)
     return pd.DataFrame(rows)
+
+
+def aci_section(a: pd.DataFrame, sel: pd.DataFrame, cfg) -> list[str]:
+    """Static vs adaptive (ACI) count-interval coverage for the selected count models."""
+    pick = sel.set_index("h")["selected count model"]
+    rows = []
+    for scope in ("2024-25 targets", "2026 targets", TEST):
+        g = a[a["scope"] == scope]
+        g = g[g["model"].to_numpy() == pick.reindex(g["h"]).to_numpy()]
+        w = g["n"] / g["n"].sum()
+        rows.append(
+            {
+                "scope (selected count models, all horizons)": scope,
+                "n": int(g["n"].sum()),
+                "80% static": float((g["coverage80 %"] * w).sum()),
+                "80% ACI": float((g["coverage80 ACI %"] * w).sum()),
+                "90% static": float((g["coverage90 %"] * w).sum()),
+                "90% ACI": float((g["coverage90 ACI %"] * w).sum()),
+                "90% width static": float((g["width90"] * w).sum()),
+                "90% width ACI": float((g["width90 ACI"] * w).sum()),
+            }
+        )
+    why = a["interval reason"].iloc[0]
+    return [
+        "### Count intervals: static split-conformal vs adaptive conformal (ACI)",
+        "",
+        "ACI (Gibbs & Candes 2021) keeps the same rolling pool of past-only scores but adapts "
+        "the working miscoverage online: when a forecast's target is reported, the miscoverage "
+        f"moves by gamma = {cfg['aci_gamma']} x (nominal - miss), per forecast, with gamma fixed "
+        "a priori. The dashboard uses ACI only if it brings 2026 coverage closer to nominal "
+        f"without moving 2024-25 coverage more than {cfg['aci_tolerance_pp']} points from "
+        "nominal.",
+        "",
+        md(pd.DataFrame(rows), fmt="{:.1f}"),
+        "",
+        f"**{why}.**",
+        "",
+    ]
 
 
 def write(cfg, fc: pd.DataFrame, tr: pd.DataFrame, lives: dict) -> None:
@@ -342,81 +387,114 @@ def write(cfg, fc: pd.DataFrame, tr: pd.DataFrame, lives: dict) -> None:
         rel = FIG / f"outlook_{d}_reliability.png"
         skill_figure(tr, d, sk, cfg)
         reliability_figure(fc, d, rel, cfg)
-        ch = a[a["scope"] == "all"].drop_duplicates("h")[
-            ["h", "lightgbm beats persistence (count)", "lightgbm beats persistence (class)",
-             "dashboard count model", "dashboard class model"]
+        sel = a[a["scope"] == TEST].drop_duplicates("h")[
+            ["h", "selected count model", "count selection reason", "selected probability model",
+             "probability selection reason"]
         ]  # fmt: skip
         n_eval = fc[(fc["disease"] == d) & (fc["kind"] == "backtest")]["origin_week"]
         out += [
             f"## {d.capitalize()}",
             "",
-            f"Test origins {n_eval.min()} to {n_eval.max()} "
-            f"({n_eval.nunique()} origins x 26 districts x up to {H} horizons).",
+            f"Backtest origins {n_eval.min()} to {n_eval.max()} ({n_eval.nunique()} origins x 26 "
+            f"districts x up to {H} horizons). **Models are selected on 2024 origins only; every "
+            "number below is on the untouched 2025-26 origins** unless the heading says "
+            "otherwise.",
             "",
-            "### Headline: Brier skill vs persistence (BSS), MASE vs persistence, 90% interval "
-            "coverage",
+            "### Headline (test origins 2025-26): Brier skill vs persistence (BSS), MASE vs "
+            "persistence, 90% interval coverage (static split-conformal)",
             "",
             md(headline_table(tr, d, cfg), fmt="{:.2f}"),
             "",
             f"![skill]({sk.relative_to(DOC.parent).as_posix()})",
             "",
-            "### Stop rule: does LightGBM beat persistence?",
+            "### Model selection (2024 origins) -> what the dashboard shows",
             "",
-            "Where it does not, the dashboard uses the best baseline at that horizon (and says "
-            "so).",
+            "Candidates: persistence, seasonal climatology, NB GLM / logistic, LightGBM. Counts "
+            "are selected by MASE, P(elevated) by Brier, on 2024 origins only; any model within "
+            "0.01 of the best is a tie and the simplest of the tied models is kept (persistence < "
+            "climatology < GLM < LightGBM). This replaces the earlier rule (LightGBM unless "
+            "persistence beats it), which looked at all years and ignored the GLM.",
             "",
-            md(ch),
+            md(sel.assign(**{c: sel[c].map(LABEL) for c in ("selected count model",
+                                                            "selected probability model")})),
             "",
-        ]
-        lose = ch[
-            ~ch["lightgbm beats persistence (count)"] | ~ch["lightgbm beats persistence (class)"]
-        ]
-        if len(lose):
-            out += [
-                "**At "
-                + ", ".join(f"h={r[0]} ({_lost(r[1], r[2])})" for r in lose.itertuples(index=False))
-                + " LightGBM does not beat persistence, so the dashboard shows the best baseline "
-                "there.**",
-                "",
-            ]
-        else:
-            out += ["LightGBM beats persistence on both targets at every horizon.", ""]
-        cnt = a[a["scope"] == "all"][
-            ["model", "h", "n", "MAE", "RMSE", "MASE vs persistence", "coverage80 %", "width80",
-             "coverage90 %", "width90"]
         ]  # fmt: skip
-        cls = a[a["scope"] == "all"][
+        ts = a[a["scope"] == TEST]
+        pick = sel.set_index("h")
+        sc = ts[ts["model"].to_numpy() == pick.reindex(ts["h"])["selected count model"].to_numpy()]
+        sp = ts[
+            ts["model"].to_numpy() == pick.reindex(ts["h"])["selected probability model"].to_numpy()
+        ]
+        lg = ts[ts["model"] == "lightgbm"].set_index("h")
+        cmp_ = pd.DataFrame(
+            {
+                "h": sc["h"].to_numpy(),
+                "selected count model": sc["model"].map(LABEL).to_numpy(),
+                "its MASE (test)": sc["MASE vs persistence"].to_numpy(),
+                "LightGBM MASE (test)": lg.loc[sc["h"], "MASE vs persistence"].to_numpy(),
+            }
+        ).merge(
+            pd.DataFrame(
+                {
+                    "h": sp["h"].to_numpy(),
+                    "selected probability model": sp["model"].map(LABEL).to_numpy(),
+                    "its BSS vs persistence (test)": sp["BSS vs persistence"].to_numpy(),
+                    "its BSS vs climatology (test)": sp["BSS vs climatology"].to_numpy(),
+                    "LightGBM BSS vs persistence (test)": lg.loc[
+                        sp["h"], "BSS vs persistence"
+                    ].to_numpy(),
+                }
+            ),
+            on="h",
+        )
+        beat = (cmp_["its MASE (test)"] < 1).all() and (
+            cmp_["its BSS vs persistence (test)"] > 0
+        ).all()
+        out += [
+            "How the selected models do on the untouched test (2025-26 origins):",
+            "",
+            md(cmp_, fmt="{:.3f}"),
+            "",
+            "The selected models beat persistence on both targets at every horizon on the test."
+            if beat
+            else "**At some horizons a selected model does not beat persistence on the test "
+            "(MASE >= 1 or BSS <= 0); see the table.**",
+            "",
+        ]
+        cnt = ts[
+            ["model", "h", "n", "MAE", "RMSE", "MASE vs persistence", "coverage80 %", "width80",
+             "coverage90 %", "width90", "coverage80 ACI %", "coverage90 ACI %", "width90 ACI"]
+        ]  # fmt: skip
+        cls = ts[
             ["model", "h", "n_class", "base rate %", "Brier", "BSS vs persistence",
              "BSS vs climatology", "recall", "precision", "AUROC", "PR-AUC", "mean p range"]
         ]  # fmt: skip
         out += [
-            "### Counts, every horizon",
+            "### Counts, every horizon (test)",
             "",
             md(cnt.assign(model=cnt["model"].map(LABEL)).sort_values(["h", "model"])),
             "",
-            "### Elevated, every horizon",
+            "### Elevated, every horizon (test)",
             "",
             md(cls.assign(model=cls["model"].map(LABEL)).sort_values(["h", "model"])),
             "",
             f"![reliability]({rel.relative_to(DOC.parent).as_posix()})",
             "",
+            "`mean p range` is the width of the Venn-Abers calibration range. It is narrow "
+            "because the calibration pool is large and it describes calibration uncertainty "
+            "only; outbreak uncertainty is carried by the count interval. The dashboard shows "
+            "the range only in a tooltip, labelled 'calibration range'.",
+            "",
         ]
-        y26 = a[(a["scope"] == "2026") & a["h"].isin(headline_h(cfg))]
+        out += aci_section(a, sel, cfg)
+        y26 = a[(a["scope"] == "2026 targets") & a["h"].isin(headline_h(cfg))]
         out += [
             "### 2026 separately (targets in 2026)",
             "",
             md(
                 y26.assign(model=y26["model"].map(LABEL))[
-                    [
-                        "model",
-                        "h",
-                        "n",
-                        "MASE vs persistence",
-                        "BSS vs persistence",
-                        "BSS vs climatology",
-                        "AUROC",
-                        "coverage90 %",
-                    ]
+                    ["model", "h", "n", "MASE vs persistence", "BSS vs persistence",
+                     "BSS vs climatology", "AUROC", "coverage90 %", "coverage90 ACI %"]
                 ].sort_values(["h", "model"])
             ),  # fmt: skip
             "",

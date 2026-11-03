@@ -182,6 +182,8 @@ outlook:
   calib_origins: 52           # rolling calibration pool (origins) for conformal and Venn-Abers
   calib_min: 100              # fewer residuals than this -> no interval
   conformal_levels: [0.8, 0.9]
+  aci_gamma: 0.005             # ACI step per resolved forecast (Gibbs & Candes 2021), fixed a priori
+  aci_tolerance_pp: 2.5       # ACI is used only if 2024-25 coverage stays within this of nominal
   logistic_c: 1.0
   lightgbm:
     n_estimators: 300
@@ -199,6 +201,24 @@ thresholds:
   completeness_min_pct: null    # not used: C** is undefined, gating is relative (completeness_low)
   radar_alert_quantile: 0.98    # NB-GLM upper bound; tightened by the backtest if the stop rule fires
   max_alert_rate: 0.10          # stop rule: >10% of district-weeks flagged
+
+# Non-clinical guard (src/radar_lk/guard.py). Briefs and dashboard text must not contain any of
+# these words (whole words, any case); a hit fails the brief build and the tests. The approved
+# disclaimer sentences below are exempt (they state what the tool does NOT do).
+nonclinical:
+  blocklist: [treat, treats, treated, treating, treatment, treatments, therapy, therapies,
+    diagnose, diagnosed, diagnoses, diagnosis, diagnostic, prophylaxis, prophylactic,
+    chemoprophylaxis, prescribe, prescribed, prescription, dose, doses, dosage, medication,
+    medications, medicine, medicines, drug, drugs, cure, cures, patient, patients, antibiotic,
+    antibiotics, doxycycline, penicillin, amoxicillin, azithromycin, ceftriaxone, ciprofloxacin,
+    paracetamol, acetaminophen, ibuprofen, aspirin, NSAID, NSAIDs, vaccinate, vaccination,
+    vaccine, vaccines, isoniazid, rifampicin, chloroquine]
+  allowed_phrases:
+    - "No diagnosis, treatment or prophylaxis advice."
+    - "no diagnosis, treatment or prophylaxis advice"
+    - "No diagnosis, no treatment or prophylaxis advice"
+    - "no diagnosis, no treatment or prophylaxis advice"
+    - "No clinical content: no diagnosis, treatment or prophylaxis advice"
 
 # Radar display: the dashboard and the brief share these (src/radar_lk/radar/labels.py). Kept
 # outside `radar:` so that changing wording does not invalidate the cached NB fits.

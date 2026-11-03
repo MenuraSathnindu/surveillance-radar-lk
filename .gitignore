@@ -23,3 +23,7 @@ data/review_queue/*.parquet
 data/raw/boundaries/*.zip
 data/cache/
 data/handcheck/_v1_invalid/
+
+# Pipeline outputs that are regenerated locally
+data/logs/
+data/briefs/

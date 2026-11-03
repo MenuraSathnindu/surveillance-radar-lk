@@ -14,150 +14,179 @@ Generated 2026-11-03 by `python -m radar_lk.outlook.backtest`. Primary data: Epi
 
 ## Leptospirosis
 
-Test origins 2024-W01 to 2026-W32 (136 origins x 26 districts x up to 10 horizons).
+Backtest origins 2024-W01 to 2026-W32 (136 origins x 26 districts x up to 10 horizons). **Models are selected on 2024 origins only; every number below is on the untouched 2025-26 origins** unless the heading says otherwise.
 
-### Headline: Brier skill vs persistence (BSS), MASE vs persistence, 90% interval coverage
+### Headline (test origins 2025-26): Brier skill vs persistence (BSS), MASE vs persistence, 90% interval coverage (static split-conformal)
 
 | model | h=1 BSS | h=1 MASE | h=1 cov90 % | h=2 BSS | h=2 MASE | h=2 cov90 % | h=9 (this week) BSS | h=9 (this week) MASE | h=9 (this week) cov90 % | h=10 (next week) BSS | h=10 (next week) MASE | h=10 (next week) cov90 % |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Persistence | 0.00 | 1.00 | 90.38 | 0.00 | 1.00 | 90.87 | 0.00 | 1.00 | 91.66 | 0.00 | 1.00 | 91.99 |
-| Seasonal climatology | 0.21 | 1.02 | 91.90 | 0.23 | 0.98 | 92.10 | 0.44 | 0.74 | 93.61 | 0.44 | 0.72 | 93.68 |
-| NB GLM / logistic | 0.38 | 0.92 | 91.38 | 0.37 | 0.89 | 92.13 | 0.48 | 0.73 | 93.58 | 0.48 | 0.71 | 93.90 |
-| LightGBM | 0.35 | 0.94 | 91.32 | 0.35 | 0.92 | 91.75 | 0.47 | 0.75 | 93.24 | 0.47 | 0.73 | 93.53 |
+| Persistence | 0.00 | 1.00 | 91.07 | 0.00 | 1.00 | 91.39 | 0.00 | 1.00 | 92.62 | 0.00 | 1.00 | 93.05 |
+| Seasonal climatology | 0.33 | 0.89 | 94.35 | 0.36 | 0.86 | 94.57 | 0.51 | 0.68 | 95.53 | 0.50 | 0.67 | 95.68 |
+| NB GLM / logistic | 0.40 | 0.91 | 92.07 | 0.42 | 0.89 | 92.93 | 0.52 | 0.71 | 94.80 | 0.50 | 0.70 | 95.10 |
+| LightGBM | 0.37 | 0.93 | 92.40 | 0.39 | 0.91 | 92.45 | 0.50 | 0.76 | 93.87 | 0.49 | 0.75 | 94.63 |
 
 ![skill](figures/outlook_leptospirosis_skill.png)
 
-### Stop rule: does LightGBM beat persistence?
+### Model selection (2024 origins) -> what the dashboard shows
 
-Where it does not, the dashboard uses the best baseline at that horizon (and says so).
+Candidates: persistence, seasonal climatology, NB GLM / logistic, LightGBM. Counts are selected by MASE, P(elevated) by Brier, on 2024 origins only; any model within 0.01 of the best is a tie and the simplest of the tied models is kept (persistence < climatology < GLM < LightGBM). This replaces the earlier rule (LightGBM unless persistence beats it), which looked at all years and ignored the GLM.
 
-| h | lightgbm beats persistence (count) | lightgbm beats persistence (class) | dashboard count model | dashboard class model |
+| h | selected count model | count selection reason | selected probability model | probability selection reason |
 |---|---|---|---|---|
-| 1 | True | True | lightgbm | lightgbm |
-| 2 | True | True | lightgbm | lightgbm |
-| 3 | True | True | lightgbm | lightgbm |
-| 4 | True | True | lightgbm | lightgbm |
-| 5 | True | True | lightgbm | lightgbm |
-| 6 | True | True | lightgbm | lightgbm |
-| 7 | True | True | lightgbm | lightgbm |
-| 8 | True | True | lightgbm | lightgbm |
-| 9 | True | True | lightgbm | lightgbm |
-| 10 | True | True | lightgbm | lightgbm |
+| 1 | NB GLM / logistic | MASE best on 2024 origins (0.904) | NB GLM / logistic | Brier best on 2024 origins (0.211) |
+| 2 | NB GLM / logistic | MASE best on 2024 origins (0.890) | NB GLM / logistic | Brier best on 2024 origins (0.218) |
+| 3 | NB GLM / logistic | MASE best on 2024 origins (0.854) | NB GLM / logistic | Brier best on 2024 origins (0.227) |
+| 4 | NB GLM / logistic | MASE best on 2024 origins (0.821) | NB GLM / logistic | Brier best on 2024 origins (0.232) |
+| 5 | NB GLM / logistic | MASE best on 2024 origins (0.790) | NB GLM / logistic | Brier within 0.01 of the best on 2024 origins (lightgbm 0.236, glm 0.237); the simpler model is kept |
+| 6 | NB GLM / logistic | MASE within 0.01 of the best on 2024 origins (lightgbm 0.759, glm 0.767); the simpler model is kept | NB GLM / logistic | Brier within 0.01 of the best on 2024 origins (lightgbm 0.238, glm 0.239); the simpler model is kept |
+| 7 | LightGBM | MASE best on 2024 origins (0.747) | NB GLM / logistic | Brier within 0.01 of the best on 2024 origins (lightgbm 0.240, glm 0.244); the simpler model is kept |
+| 8 | LightGBM | MASE best on 2024 origins (0.752) | NB GLM / logistic | Brier within 0.01 of the best on 2024 origins (lightgbm 0.243, glm 0.246); the simpler model is kept |
+| 9 | LightGBM | MASE best on 2024 origins (0.736) | NB GLM / logistic | Brier within 0.01 of the best on 2024 origins (lightgbm 0.244, glm 0.248); the simpler model is kept |
+| 10 | LightGBM | MASE best on 2024 origins (0.705) | NB GLM / logistic | Brier within 0.01 of the best on 2024 origins (lightgbm 0.247, glm 0.250); the simpler model is kept |
 
-LightGBM beats persistence on both targets at every horizon.
+How the selected models do on the untouched test (2025-26 origins):
 
-### Counts, every horizon
+| h | selected count model | its MASE (test) | LightGBM MASE (test) | selected probability model | its BSS vs persistence (test) | its BSS vs climatology (test) | LightGBM BSS vs persistence (test) |
+|---|---|---|---|---|---|---|---|
+| 1 | NB GLM / logistic | 0.915 | 0.931 | NB GLM / logistic | 0.397 | 0.100 | 0.367 |
+| 2 | NB GLM / logistic | 0.890 | 0.909 | NB GLM / logistic | 0.418 | 0.085 | 0.391 |
+| 3 | NB GLM / logistic | 0.852 | 0.865 | NB GLM / logistic | 0.411 | 0.078 | 0.382 |
+| 4 | NB GLM / logistic | 0.808 | 0.830 | NB GLM / logistic | 0.452 | 0.058 | 0.423 |
+| 5 | NB GLM / logistic | 0.785 | 0.811 | NB GLM / logistic | 0.467 | 0.048 | 0.439 |
+| 6 | NB GLM / logistic | 0.752 | 0.798 | NB GLM / logistic | 0.472 | 0.059 | 0.442 |
+| 7 | LightGBM | 0.764 | 0.764 | NB GLM / logistic | 0.497 | 0.047 | 0.467 |
+| 8 | LightGBM | 0.760 | 0.760 | NB GLM / logistic | 0.510 | 0.029 | 0.484 |
+| 9 | LightGBM | 0.761 | 0.761 | NB GLM / logistic | 0.524 | 0.019 | 0.501 |
+| 10 | LightGBM | 0.753 | 0.753 | NB GLM / logistic | 0.502 | 0.008 | 0.485 |
 
-| model | h | n | MAE | RMSE | MASE vs persistence | coverage80 % | width80 | coverage90 % | width90 |
-|---|---|---|---|---|---|---|---|---|---|
-| LightGBM | 1 | 3432 | 4.289 | 7.380 | 0.938 | 81.090 | 10.897 | 91.317 | 15.505 |
-| NB GLM / logistic | 1 | 3432 | 4.194 | 7.220 | 0.917 | 81.381 | 10.953 | 91.375 | 15.154 |
-| Persistence | 1 | 3432 | 4.573 | 7.626 | 1.000 | 81.061 | 11.955 | 90.385 | 16.339 |
-| Seasonal climatology | 1 | 3432 | 4.666 | 8.258 | 1.020 | 83.013 | 12.211 | 91.900 | 17.102 |
-| LightGBM | 2 | 3406 | 4.376 | 7.545 | 0.919 | 81.562 | 11.220 | 91.750 | 16.029 |
-| NB GLM / logistic | 2 | 3406 | 4.256 | 7.356 | 0.894 | 82.501 | 11.359 | 92.132 | 15.737 |
-| Persistence | 2 | 3406 | 4.760 | 8.181 | 1.000 | 81.122 | 12.332 | 90.869 | 16.954 |
-| Seasonal climatology | 2 | 3406 | 4.648 | 8.242 | 0.976 | 83.294 | 12.255 | 92.102 | 17.171 |
-| LightGBM | 3 | 3380 | 4.436 | 7.710 | 0.872 | 82.367 | 11.420 | 92.337 | 16.399 |
-| NB GLM / logistic | 3 | 3380 | 4.340 | 7.458 | 0.853 | 82.722 | 11.611 | 92.367 | 16.272 |
-| Persistence | 3 | 3380 | 5.089 | 8.698 | 1.000 | 81.361 | 13.104 | 90.799 | 18.046 |
-| Seasonal climatology | 3 | 3380 | 4.625 | 8.216 | 0.909 | 83.698 | 12.307 | 92.219 | 17.252 |
-| LightGBM | 4 | 3354 | 4.463 | 7.773 | 0.834 | 82.618 | 11.603 | 92.308 | 16.725 |
-| NB GLM / logistic | 4 | 3354 | 4.361 | 7.512 | 0.815 | 82.976 | 11.735 | 92.606 | 16.540 |
-| Persistence | 4 | 3354 | 5.353 | 9.064 | 1.000 | 80.918 | 13.605 | 90.877 | 18.526 |
-| Seasonal climatology | 4 | 3354 | 4.592 | 8.159 | 0.858 | 84.109 | 12.363 | 92.576 | 17.342 |
-| LightGBM | 5 | 3328 | 4.488 | 7.804 | 0.803 | 82.843 | 11.694 | 92.488 | 16.887 |
-| NB GLM / logistic | 5 | 3328 | 4.424 | 7.620 | 0.791 | 83.263 | 12.158 | 92.969 | 17.037 |
-| Persistence | 5 | 3328 | 5.591 | 9.422 | 1.000 | 81.310 | 14.576 | 90.685 | 19.517 |
-| Seasonal climatology | 5 | 3328 | 4.558 | 8.123 | 0.815 | 84.525 | 12.425 | 92.939 | 17.440 |
-| LightGBM | 6 | 3302 | 4.482 | 7.803 | 0.780 | 83.041 | 11.829 | 92.974 | 17.047 |
-| NB GLM / logistic | 6 | 3302 | 4.387 | 7.599 | 0.763 | 83.495 | 12.173 | 93.065 | 17.130 |
-| Persistence | 6 | 3302 | 5.747 | 9.676 | 1.000 | 81.102 | 14.616 | 90.612 | 19.821 |
-| Seasonal climatology | 6 | 3302 | 4.514 | 8.062 | 0.785 | 85.130 | 12.491 | 93.216 | 17.543 |
-| LightGBM | 7 | 3276 | 4.508 | 7.837 | 0.756 | 83.303 | 11.957 | 93.010 | 17.347 |
-| NB GLM / logistic | 7 | 3276 | 4.420 | 7.669 | 0.742 | 83.639 | 12.393 | 93.254 | 17.493 |
-| Persistence | 7 | 3276 | 5.960 | 9.976 | 1.000 | 81.532 | 15.296 | 91.209 | 20.850 |
-| Seasonal climatology | 7 | 3276 | 4.507 | 8.057 | 0.756 | 85.348 | 12.559 | 93.315 | 17.651 |
-| LightGBM | 8 | 3250 | 4.544 | 7.907 | 0.756 | 83.477 | 12.084 | 93.508 | 17.600 |
-| NB GLM / logistic | 8 | 3250 | 4.427 | 7.690 | 0.737 | 84.308 | 12.500 | 93.754 | 17.747 |
-| Persistence | 8 | 3250 | 6.007 | 9.957 | 1.000 | 81.231 | 15.363 | 91.354 | 20.875 |
-| Seasonal climatology | 8 | 3250 | 4.500 | 8.062 | 0.749 | 85.538 | 12.636 | 93.446 | 17.757 |
-| LightGBM | 9 | 3224 | 4.555 | 7.935 | 0.749 | 83.592 | 12.213 | 93.238 | 17.686 |
-| NB GLM / logistic | 9 | 3224 | 4.430 | 7.737 | 0.728 | 84.615 | 12.644 | 93.579 | 17.889 |
-| Persistence | 9 | 3224 | 6.081 | 10.225 | 1.000 | 81.576 | 15.538 | 91.656 | 21.362 |
-| Seasonal climatology | 9 | 3224 | 4.487 | 8.057 | 0.738 | 85.856 | 12.717 | 93.610 | 17.868 |
-| LightGBM | 10 | 3198 | 4.567 | 8.008 | 0.730 | 84.115 | 12.359 | 93.527 | 17.884 |
-| NB GLM / logistic | 10 | 3198 | 4.442 | 7.776 | 0.710 | 84.615 | 12.674 | 93.902 | 18.211 |
-| Persistence | 10 | 3198 | 6.253 | 10.611 | 1.000 | 81.926 | 16.061 | 91.995 | 22.632 |
-| Seasonal climatology | 10 | 3198 | 4.482 | 8.064 | 0.717 | 86.085 | 12.792 | 93.684 | 17.976 |
+The selected models beat persistence on both targets at every horizon on the test.
 
-### Elevated, every horizon
+### Counts, every horizon (test)
+
+| model | h | n | MAE | RMSE | MASE vs persistence | coverage80 % | width80 | coverage90 % | width90 | coverage80 ACI % | coverage90 ACI % | width90 ACI |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| LightGBM | 1 | 2106 | 3.943 | 5.990 | 0.931 | 81.814 | 10.838 | 92.403 | 15.029 | 80.912 | 90.503 | 14.476 |
+| NB GLM / logistic | 1 | 2106 | 3.874 | 6.157 | 0.915 | 81.719 | 10.629 | 92.070 | 14.331 | 81.292 | 90.741 | 14.161 |
+| Persistence | 1 | 2106 | 4.234 | 6.626 | 1.000 | 81.529 | 11.603 | 91.073 | 15.997 | 81.244 | 90.741 | 16.023 |
+| Seasonal climatology | 1 | 2106 | 3.788 | 5.901 | 0.895 | 85.850 | 11.790 | 94.349 | 16.726 | 81.387 | 90.836 | 14.637 |
+| LightGBM | 2 | 2080 | 3.998 | 6.069 | 0.909 | 82.019 | 11.002 | 92.452 | 15.248 | 80.913 | 90.481 | 14.561 |
+| NB GLM / logistic | 2 | 2080 | 3.914 | 6.234 | 0.890 | 82.067 | 10.843 | 92.933 | 14.832 | 81.298 | 90.817 | 14.303 |
+| Persistence | 2 | 2080 | 4.398 | 6.992 | 1.000 | 81.779 | 11.897 | 91.394 | 16.184 | 81.587 | 90.817 | 18.530 |
+| Seasonal climatology | 2 | 2080 | 3.770 | 5.876 | 0.857 | 85.865 | 11.801 | 94.567 | 16.762 | 81.538 | 90.865 | 14.435 |
+| LightGBM | 3 | 2054 | 4.026 | 6.066 | 0.865 | 82.571 | 11.202 | 93.135 | 15.482 | 80.818 | 90.555 | 14.669 |
+| NB GLM / logistic | 3 | 2054 | 3.964 | 6.161 | 0.852 | 83.155 | 11.142 | 93.087 | 15.292 | 81.548 | 90.798 | 14.416 |
+| Persistence | 3 | 2054 | 4.654 | 7.336 | 1.000 | 81.451 | 12.517 | 91.383 | 17.063 | 81.548 | 90.944 | 22.083 |
+| Seasonal climatology | 3 | 2054 | 3.766 | 5.878 | 0.809 | 86.076 | 11.826 | 94.596 | 16.821 | 81.451 | 90.847 | 14.593 |
+| LightGBM | 4 | 2028 | 4.056 | 6.154 | 0.830 | 82.643 | 11.303 | 92.998 | 15.795 | 80.819 | 90.533 | 15.389 |
+| NB GLM / logistic | 4 | 2028 | 3.945 | 6.041 | 0.808 | 83.481 | 11.218 | 93.343 | 15.557 | 81.410 | 90.730 | 14.757 |
+| Persistence | 4 | 2028 | 4.885 | 7.596 | 1.000 | 82.051 | 13.236 | 91.272 | 17.751 | 81.410 | 90.828 | 25.690 |
+| Seasonal climatology | 4 | 2028 | 3.738 | 5.825 | 0.765 | 86.391 | 11.853 | 94.921 | 16.885 | 81.460 | 90.828 | 14.591 |
+| LightGBM | 5 | 2002 | 4.078 | 6.146 | 0.811 | 82.767 | 11.436 | 93.057 | 15.978 | 80.669 | 90.659 | 19.290 |
+| NB GLM / logistic | 5 | 2002 | 3.950 | 5.945 | 0.785 | 84.416 | 11.556 | 93.906 | 15.840 | 81.518 | 90.709 | 19.712 |
+| Persistence | 5 | 2002 | 5.030 | 7.755 | 1.000 | 82.867 | 14.048 | 91.708 | 18.786 | 82.168 | 90.509 | 22.340 |
+| Seasonal climatology | 5 | 2002 | 3.730 | 5.817 | 0.742 | 86.763 | 11.885 | 95.155 | 16.953 | 81.419 | 90.759 | 14.856 |
+| LightGBM | 6 | 1976 | 4.077 | 6.146 | 0.798 | 82.996 | 11.563 | 93.370 | 16.044 | 80.769 | 90.638 | 25.025 |
+| NB GLM / logistic | 6 | 1976 | 3.842 | 5.739 | 0.752 | 84.514 | 11.512 | 94.028 | 15.660 | 81.427 | 90.891 | 26.202 |
+| Persistence | 6 | 1976 | 5.107 | 7.916 | 1.000 | 82.794 | 14.106 | 91.447 | 19.025 | 81.022 | 91.447 | 45.889 |
+| Seasonal climatology | 6 | 1976 | 3.728 | 5.829 | 0.730 | 87.095 | 11.929 | 95.091 | 17.040 | 81.123 | 90.739 | 17.857 |
+| LightGBM | 7 | 1976 | 4.124 | 6.197 | 0.764 | 82.794 | 11.659 | 93.522 | 16.377 | 81.073 | 91.144 | 48.784 |
+| NB GLM / logistic | 7 | 1976 | 3.846 | 5.692 | 0.712 | 84.413 | 11.560 | 94.231 | 15.985 | 81.326 | 91.397 | 51.220 |
+| Persistence | 7 | 1976 | 5.400 | 8.339 | 1.000 | 82.591 | 14.898 | 91.852 | 19.949 | 81.984 | 91.903 | 52.039 |
+| Seasonal climatology | 7 | 1976 | 3.728 | 5.829 | 0.690 | 87.247 | 12.002 | 95.142 | 17.162 | 81.123 | 91.346 | 30.426 |
+| LightGBM | 8 | 1950 | 4.158 | 6.248 | 0.760 | 83.026 | 11.779 | 94.256 | 16.609 | 81.385 | 91.282 | 56.526 |
+| NB GLM / logistic | 8 | 1950 | 3.850 | 5.660 | 0.703 | 84.718 | 11.615 | 95.026 | 16.271 | 81.846 | 92.051 | 71.273 |
+| Persistence | 8 | 1950 | 5.472 | 8.373 | 1.000 | 82.462 | 15.033 | 92.359 | 19.965 | 82.462 | 92.769 | 101.762 |
+| Seasonal climatology | 8 | 1950 | 3.689 | 5.772 | 0.674 | 87.538 | 12.071 | 95.385 | 17.272 | 80.872 | 91.744 | 40.340 |
+| LightGBM | 9 | 1924 | 4.164 | 6.256 | 0.761 | 83.108 | 11.871 | 93.867 | 16.657 | 81.289 | 91.580 | 71.578 |
+| NB GLM / logistic | 9 | 1924 | 3.863 | 5.679 | 0.706 | 85.031 | 11.692 | 94.802 | 16.362 | 81.757 | 92.827 | 82.534 |
+| Persistence | 9 | 1924 | 5.474 | 8.300 | 1.000 | 82.380 | 15.016 | 92.620 | 20.268 | 83.212 | 93.295 | 126.954 |
+| Seasonal climatology | 9 | 1924 | 3.700 | 5.790 | 0.676 | 87.682 | 12.143 | 95.530 | 17.392 | 81.341 | 91.944 | 44.972 |
+| LightGBM | 10 | 1898 | 4.154 | 6.261 | 0.753 | 83.930 | 11.972 | 94.626 | 16.891 | 81.770 | 91.886 | 75.961 |
+| NB GLM / logistic | 10 | 1898 | 3.843 | 5.668 | 0.697 | 84.563 | 11.724 | 95.100 | 16.754 | 83.456 | 93.625 | 98.787 |
+| Persistence | 10 | 1898 | 5.514 | 8.537 | 1.000 | 83.720 | 15.490 | 93.045 | 21.106 | 85.142 | 91.465 | 79.413 |
+| Seasonal climatology | 10 | 1898 | 3.686 | 5.775 | 0.669 | 87.987 | 12.209 | 95.680 | 17.502 | 82.403 | 91.728 | 41.657 |
+
+### Elevated, every horizon (test)
 
 | model | h | n_class | base rate % | Brier | BSS vs persistence | BSS vs climatology | recall | precision | AUROC | PR-AUC | mean p range |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| LightGBM | 1 | 3432 | 27.885 | 0.172 | 0.352 | 0.181 | 0.327 | 0.544 | 0.745 | 0.516 | 0.015 |
-| NB GLM / logistic | 1 | 3432 | 27.885 | 0.166 | 0.376 | 0.211 | 0.388 | 0.606 | 0.764 | 0.554 | 0.017 |
-| Persistence | 1 | 3432 | 27.885 | 0.265 | 0.000 | -0.264 | 0.532 | 0.524 | 0.672 | 0.409 |  |
-| Seasonal climatology | 1 | 3432 | 27.885 | 0.210 | 0.209 | 0.000 | 0.149 | 0.498 | 0.631 | 0.399 |  |
-| LightGBM | 2 | 3406 | 27.892 | 0.175 | 0.353 | 0.166 | 0.280 | 0.567 | 0.732 | 0.500 | 0.016 |
-| NB GLM / logistic | 2 | 3406 | 27.892 | 0.169 | 0.375 | 0.193 | 0.311 | 0.583 | 0.754 | 0.532 | 0.016 |
-| Persistence | 2 | 3406 | 27.892 | 0.271 | 0.000 | -0.290 | 0.522 | 0.514 | 0.666 | 0.402 |  |
-| Seasonal climatology | 2 | 3406 | 27.892 | 0.210 | 0.225 | 0.000 | 0.151 | 0.498 | 0.630 | 0.399 |  |
-| LightGBM | 3 | 3380 | 27.751 | 0.178 | 0.374 | 0.143 | 0.271 | 0.502 | 0.720 | 0.472 | 0.015 |
-| NB GLM / logistic | 3 | 3380 | 27.751 | 0.173 | 0.392 | 0.167 | 0.302 | 0.490 | 0.741 | 0.509 | 0.016 |
-| Persistence | 3 | 3380 | 27.751 | 0.285 | 0.000 | -0.369 | 0.501 | 0.487 | 0.649 | 0.382 |  |
-| Seasonal climatology | 3 | 3380 | 27.751 | 0.208 | 0.270 | 0.000 | 0.152 | 0.500 | 0.633 | 0.398 |  |
-| LightGBM | 4 | 3354 | 27.698 | 0.181 | 0.408 | 0.124 | 0.290 | 0.457 | 0.713 | 0.444 | 0.014 |
-| NB GLM / logistic | 4 | 3354 | 27.698 | 0.177 | 0.423 | 0.146 | 0.335 | 0.468 | 0.731 | 0.476 | 0.017 |
-| Persistence | 4 | 3354 | 27.698 | 0.306 | 0.000 | -0.479 | 0.470 | 0.450 | 0.625 | 0.358 |  |
-| Seasonal climatology | 4 | 3354 | 27.698 | 0.207 | 0.324 | 0.000 | 0.157 | 0.510 | 0.637 | 0.401 |  |
-| LightGBM | 5 | 3328 | 27.524 | 0.183 | 0.434 | 0.107 | 0.272 | 0.470 | 0.702 | 0.424 | 0.013 |
-| NB GLM / logistic | 5 | 3328 | 27.524 | 0.179 | 0.447 | 0.128 | 0.266 | 0.443 | 0.720 | 0.445 | 0.015 |
-| Persistence | 5 | 3328 | 27.524 | 0.323 | 0.000 | -0.576 | 0.440 | 0.417 | 0.603 | 0.338 |  |
-| Seasonal climatology | 5 | 3328 | 27.524 | 0.205 | 0.366 | 0.000 | 0.160 | 0.507 | 0.639 | 0.400 |  |
-| LightGBM | 6 | 3302 | 27.710 | 0.184 | 0.432 | 0.103 | 0.294 | 0.473 | 0.702 | 0.416 | 0.012 |
-| NB GLM / logistic | 6 | 3302 | 27.710 | 0.180 | 0.445 | 0.124 | 0.294 | 0.438 | 0.717 | 0.451 | 0.014 |
-| Persistence | 6 | 3302 | 27.710 | 0.324 | 0.000 | -0.580 | 0.442 | 0.419 | 0.603 | 0.340 |  |
-| Seasonal climatology | 6 | 3302 | 27.710 | 0.205 | 0.367 | 0.000 | 0.161 | 0.505 | 0.643 | 0.403 |  |
-| LightGBM | 7 | 3276 | 27.778 | 0.187 | 0.445 | 0.086 | 0.296 | 0.457 | 0.695 | 0.405 | 0.013 |
-| NB GLM / logistic | 7 | 3276 | 27.778 | 0.184 | 0.456 | 0.104 | 0.290 | 0.434 | 0.707 | 0.434 | 0.014 |
-| Persistence | 7 | 3276 | 27.778 | 0.337 | 0.000 | -0.647 | 0.419 | 0.398 | 0.588 | 0.328 |  |
-| Seasonal climatology | 7 | 3276 | 27.778 | 0.205 | 0.393 | 0.000 | 0.160 | 0.502 | 0.646 | 0.405 |  |
-| LightGBM | 8 | 3250 | 27.815 | 0.189 | 0.456 | 0.069 | 0.271 | 0.407 | 0.690 | 0.397 | 0.013 |
-| NB GLM / logistic | 8 | 3250 | 27.815 | 0.186 | 0.466 | 0.086 | 0.262 | 0.432 | 0.697 | 0.420 | 0.013 |
-| Persistence | 8 | 3250 | 27.815 | 0.348 | 0.000 | -0.712 | 0.403 | 0.382 | 0.576 | 0.320 |  |
-| Seasonal climatology | 8 | 3250 | 27.815 | 0.203 | 0.416 | 0.000 | 0.165 | 0.510 | 0.652 | 0.411 |  |
-| LightGBM | 9 | 3224 | 27.636 | 0.190 | 0.473 | 0.053 | 0.270 | 0.418 | 0.687 | 0.392 | 0.013 |
-| NB GLM / logistic | 9 | 3224 | 27.636 | 0.188 | 0.481 | 0.067 | 0.249 | 0.428 | 0.685 | 0.412 | 0.012 |
-| Persistence | 9 | 3224 | 27.636 | 0.361 | 0.000 | -0.797 | 0.371 | 0.354 | 0.556 | 0.305 |  |
-| Seasonal climatology | 9 | 3224 | 27.636 | 0.201 | 0.444 | 0.000 | 0.172 | 0.513 | 0.656 | 0.412 |  |
-| LightGBM | 10 | 3198 | 27.767 | 0.191 | 0.472 | 0.055 | 0.303 | 0.413 | 0.689 | 0.398 | 0.013 |
-| NB GLM / logistic | 10 | 3198 | 27.767 | 0.189 | 0.478 | 0.065 | 0.266 | 0.413 | 0.688 | 0.409 | 0.013 |
-| Persistence | 10 | 3198 | 27.767 | 0.362 | 0.000 | -0.791 | 0.372 | 0.355 | 0.556 | 0.306 |  |
-| Seasonal climatology | 10 | 3198 | 27.767 | 0.202 | 0.442 | 0.000 | 0.169 | 0.502 | 0.654 | 0.410 |  |
+| LightGBM | 1 | 2106 | 20.085 | 0.144 | 0.367 | 0.054 | 0.144 | 0.409 | 0.737 | 0.396 | 0.015 |
+| NB GLM / logistic | 1 | 2106 | 20.085 | 0.137 | 0.397 | 0.100 | 0.225 | 0.597 | 0.758 | 0.473 | 0.017 |
+| Persistence | 1 | 2106 | 20.085 | 0.228 | 0.000 | -0.493 | 0.452 | 0.435 | 0.652 | 0.307 |  |
+| Seasonal climatology | 1 | 2106 | 20.085 | 0.153 | 0.330 | 0.000 | 0.132 | 0.519 | 0.682 | 0.358 |  |
+| LightGBM | 2 | 2080 | 19.760 | 0.145 | 0.391 | 0.042 | 0.105 | 0.489 | 0.728 | 0.375 | 0.017 |
+| NB GLM / logistic | 2 | 2080 | 19.760 | 0.138 | 0.418 | 0.085 | 0.217 | 0.574 | 0.752 | 0.443 | 0.016 |
+| Persistence | 2 | 2080 | 19.760 | 0.238 | 0.000 | -0.573 | 0.423 | 0.403 | 0.634 | 0.284 |  |
+| Seasonal climatology | 2 | 2080 | 19.760 | 0.151 | 0.364 | 0.000 | 0.141 | 0.537 | 0.676 | 0.354 |  |
+| LightGBM | 3 | 2054 | 19.718 | 0.146 | 0.382 | 0.033 | 0.111 | 0.474 | 0.724 | 0.371 | 0.016 |
+| NB GLM / logistic | 3 | 2054 | 19.718 | 0.139 | 0.411 | 0.078 | 0.190 | 0.597 | 0.749 | 0.452 | 0.016 |
+| Persistence | 3 | 2054 | 19.718 | 0.236 | 0.000 | -0.565 | 0.437 | 0.408 | 0.641 | 0.289 |  |
+| Seasonal climatology | 3 | 2054 | 19.718 | 0.151 | 0.361 | 0.000 | 0.146 | 0.551 | 0.676 | 0.354 |  |
+| LightGBM | 4 | 2028 | 19.477 | 0.147 | 0.423 | 0.008 | 0.114 | 0.405 | 0.720 | 0.352 | 0.015 |
+| NB GLM / logistic | 4 | 2028 | 19.477 | 0.140 | 0.452 | 0.058 | 0.159 | 0.600 | 0.747 | 0.432 | 0.015 |
+| Persistence | 4 | 2028 | 19.477 | 0.255 | 0.000 | -0.719 | 0.397 | 0.359 | 0.613 | 0.260 |  |
+| Seasonal climatology | 4 | 2028 | 19.477 | 0.149 | 0.418 | 0.000 | 0.149 | 0.562 | 0.681 | 0.355 |  |
+| LightGBM | 5 | 2002 | 19.331 | 0.148 | 0.439 | -0.001 | 0.085 | 0.434 | 0.708 | 0.345 | 0.014 |
+| NB GLM / logistic | 5 | 2002 | 19.331 | 0.141 | 0.467 | 0.048 | 0.186 | 0.621 | 0.743 | 0.424 | 0.014 |
+| Persistence | 5 | 2002 | 19.331 | 0.264 | 0.000 | -0.786 | 0.375 | 0.336 | 0.599 | 0.247 |  |
+| Seasonal climatology | 5 | 2002 | 19.331 | 0.148 | 0.440 | 0.000 | 0.155 | 0.566 | 0.679 | 0.356 |  |
+| LightGBM | 6 | 1976 | 19.585 | 0.148 | 0.442 | 0.005 | 0.103 | 0.408 | 0.722 | 0.340 | 0.013 |
+| NB GLM / logistic | 6 | 1976 | 19.585 | 0.140 | 0.472 | 0.059 | 0.165 | 0.674 | 0.745 | 0.456 | 0.015 |
+| Persistence | 6 | 1976 | 19.585 | 0.265 | 0.000 | -0.782 | 0.377 | 0.340 | 0.600 | 0.250 |  |
+| Seasonal climatology | 6 | 1976 | 19.585 | 0.149 | 0.439 | 0.000 | 0.152 | 0.567 | 0.681 | 0.361 |  |
+| LightGBM | 7 | 1976 | 19.838 | 0.152 | 0.467 | -0.010 | 0.079 | 0.341 | 0.712 | 0.337 | 0.015 |
+| NB GLM / logistic | 7 | 1976 | 19.838 | 0.144 | 0.497 | 0.047 | 0.217 | 0.659 | 0.737 | 0.446 | 0.016 |
+| Persistence | 7 | 1976 | 19.838 | 0.285 | 0.000 | -0.892 | 0.344 | 0.305 | 0.575 | 0.235 |  |
+| Seasonal climatology | 7 | 1976 | 19.838 | 0.151 | 0.472 | 0.000 | 0.145 | 0.553 | 0.680 | 0.358 |  |
+| LightGBM | 8 | 1950 | 19.641 | 0.153 | 0.484 | -0.024 | 0.073 | 0.289 | 0.705 | 0.317 | 0.015 |
+| NB GLM / logistic | 8 | 1950 | 19.641 | 0.145 | 0.510 | 0.029 | 0.193 | 0.661 | 0.730 | 0.421 | 0.016 |
+| Persistence | 8 | 1950 | 19.641 | 0.297 | 0.000 | -0.983 | 0.321 | 0.278 | 0.559 | 0.223 |  |
+| Seasonal climatology | 8 | 1950 | 19.641 | 0.150 | 0.496 | 0.000 | 0.144 | 0.550 | 0.679 | 0.357 |  |
+| LightGBM | 9 | 1924 | 19.699 | 0.154 | 0.501 | -0.028 | 0.058 | 0.310 | 0.700 | 0.314 | 0.014 |
+| NB GLM / logistic | 9 | 1924 | 19.699 | 0.147 | 0.524 | 0.019 | 0.140 | 0.688 | 0.723 | 0.418 | 0.014 |
+| Persistence | 9 | 1924 | 19.699 | 0.309 | 0.000 | -1.060 | 0.288 | 0.252 | 0.539 | 0.213 |  |
+| Seasonal climatology | 9 | 1924 | 19.699 | 0.150 | 0.515 | 0.000 | 0.145 | 0.550 | 0.680 | 0.358 |  |
+| LightGBM | 10 | 1898 | 19.652 | 0.153 | 0.485 | -0.026 | 0.070 | 0.377 | 0.705 | 0.328 | 0.015 |
+| NB GLM / logistic | 10 | 1898 | 19.652 | 0.148 | 0.502 | 0.008 | 0.153 | 0.640 | 0.726 | 0.420 | 0.016 |
+| Persistence | 10 | 1898 | 19.652 | 0.297 | 0.000 | -0.992 | 0.311 | 0.275 | 0.555 | 0.221 |  |
+| Seasonal climatology | 10 | 1898 | 19.652 | 0.149 | 0.498 | 0.000 | 0.145 | 0.529 | 0.687 | 0.358 |  |
 
 ![reliability](figures/outlook_leptospirosis_reliability.png)
 
+`mean p range` is the width of the Venn-Abers calibration range. It is narrow because the calibration pool is large and it describes calibration uncertainty only; outbreak uncertainty is carried by the count interval. The dashboard shows the range only in a tooltip, labelled 'calibration range'.
+
+### Count intervals: static split-conformal vs adaptive conformal (ACI)
+
+ACI (Gibbs & Candes 2021) keeps the same rolling pool of past-only scores but adapts the working miscoverage online: when a forecast's target is reported, the miscoverage moves by gamma = 0.005 x (nominal - miss), per forecast, with gamma fixed a priori. The dashboard uses ACI only if it brings 2026 coverage closer to nominal without moving 2024-25 coverage more than 2.5 points from nominal.
+
+| scope (selected count models, all horizons) | n | 80% static | 80% ACI | 90% static | 90% ACI | 90% width static | 90% width ACI |
+|---|---|---|---|---|---|---|---|
+| 2024-25 targets | 25090 | 83.2 | 80.8 | 92.6 | 90.6 | 17.8 | 39.6 |
+| 2026 targets | 8060 | 82.7 | 82.8 | 93.3 | 91.5 | 13.7 | 14.0 |
+| test (2025-26 origins) | 19994 | 83.2 | 81.4 | 93.5 | 91.0 | 15.8 | 35.0 |
+
+**ACI not used: 2026 coverage 80/90 static 82.7/93.3% -> ACI 82.8/91.5% (not closer to nominal); 2024-25 ACI 80.8/90.6% (within +-2.5 pp of nominal).**
+
 ### 2026 separately (targets in 2026)
 
-| model | h | n | MASE vs persistence | BSS vs persistence | BSS vs climatology | AUROC | coverage90 % |
-|---|---|---|---|---|---|---|---|
-| LightGBM | 1 | 806 | 0.904 | 0.441 | 0.107 | 0.778 | 93.052 |
-| NB GLM / logistic | 1 | 806 | 0.913 | 0.443 | 0.111 | 0.771 | 92.308 |
-| Persistence | 1 | 806 | 1.000 | 0.000 | -0.597 | 0.636 | 91.687 |
-| Seasonal climatology | 1 | 806 | 0.865 | 0.374 | 0.000 | 0.669 | 93.176 |
-| LightGBM | 2 | 806 | 0.928 | 0.469 | 0.120 | 0.782 | 93.176 |
-| NB GLM / logistic | 2 | 806 | 0.951 | 0.464 | 0.112 | 0.778 | 93.052 |
-| Persistence | 2 | 806 | 1.000 | 0.000 | -0.657 | 0.652 | 94.045 |
-| Seasonal climatology | 2 | 806 | 0.872 | 0.396 | 0.000 | 0.665 | 93.300 |
-| LightGBM | 9 | 806 | 0.671 | 0.592 | 0.039 | 0.733 | 93.052 |
-| NB GLM / logistic | 9 | 806 | 0.663 | 0.607 | 0.075 | 0.731 | 93.424 |
-| Persistence | 9 | 806 | 1.000 | 0.000 | -1.354 | 0.551 | 92.928 |
-| Seasonal climatology | 9 | 806 | 0.594 | 0.575 | 0.000 | 0.673 | 94.789 |
-| LightGBM | 10 | 806 | 0.682 | 0.590 | 0.044 | 0.748 | 94.169 |
-| NB GLM / logistic | 10 | 806 | 0.672 | 0.605 | 0.079 | 0.752 | 94.169 |
-| Persistence | 10 | 806 | 1.000 | 0.000 | -1.332 | 0.543 | 93.424 |
-| Seasonal climatology | 10 | 806 | 0.607 | 0.571 | 0.000 | 0.676 | 94.913 |
+| model | h | n | MASE vs persistence | BSS vs persistence | BSS vs climatology | AUROC | coverage90 % | coverage90 ACI % |
+|---|---|---|---|---|---|---|---|---|
+| LightGBM | 1 | 806 | 0.904 | 0.441 | 0.107 | 0.778 | 93.052 | 91.687 |
+| NB GLM / logistic | 1 | 806 | 0.885 | 0.443 | 0.111 | 0.771 | 92.680 | 91.563 |
+| Persistence | 1 | 806 | 1.000 | 0.000 | -0.597 | 0.636 | 91.687 | 90.819 |
+| Seasonal climatology | 1 | 806 | 0.865 | 0.374 | 0.000 | 0.669 | 93.176 | 91.191 |
+| LightGBM | 2 | 806 | 0.928 | 0.469 | 0.120 | 0.782 | 93.176 | 92.184 |
+| NB GLM / logistic | 2 | 806 | 0.933 | 0.464 | 0.112 | 0.778 | 93.424 | 91.935 |
+| Persistence | 2 | 806 | 1.000 | 0.000 | -0.657 | 0.652 | 94.045 | 93.424 |
+| Seasonal climatology | 2 | 806 | 0.872 | 0.396 | 0.000 | 0.665 | 93.300 | 91.935 |
+| LightGBM | 9 | 806 | 0.671 | 0.592 | 0.039 | 0.733 | 93.052 | 90.074 |
+| NB GLM / logistic | 9 | 806 | 0.667 | 0.607 | 0.075 | 0.731 | 93.424 | 91.067 |
+| Persistence | 9 | 806 | 1.000 | 0.000 | -1.354 | 0.551 | 92.928 | 96.650 |
+| Seasonal climatology | 9 | 806 | 0.594 | 0.575 | 0.000 | 0.673 | 94.789 | 92.432 |
+| LightGBM | 10 | 806 | 0.682 | 0.590 | 0.044 | 0.748 | 94.169 | 90.943 |
+| NB GLM / logistic | 10 | 806 | 0.681 | 0.605 | 0.079 | 0.752 | 93.797 | 92.060 |
+| Persistence | 10 | 806 | 1.000 | 0.000 | -1.332 | 0.543 | 93.424 | 97.270 |
+| Seasonal climatology | 10 | 806 | 0.607 | 0.571 | 0.000 | 0.676 | 94.913 | 92.556 |
 
 ### What drives LightGBM (live models, on their training rows)
 
@@ -213,163 +242,192 @@ Count (Poisson), top 8:
 
 | area | target_week | h | model | p_elevated | p_lo | p_hi | pred_count | lo90 | hi90 | elevated_threshold |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Kalutara | 2026-W42 | 9 | lightgbm | 0.38 | 0.38 | 0.38 | 16.90 | 6.35 | 27.46 | 17.20 |
-| Kalutara | 2026-W43 | 10 | lightgbm | 0.22 | 0.22 | 0.22 | 16.77 | 6.08 | 27.46 | 17.20 |
-| Nuwara Eliya | 2026-W43 | 10 | lightgbm | 0.22 | 0.22 | 0.22 | 5.11 | 0.00 | 11.38 | 7.00 |
-| Kegalle | 2026-W43 | 10 | lightgbm | 0.22 | 0.22 | 0.22 | 22.14 | 9.95 | 34.34 | 25.20 |
-| Nuwara Eliya | 2026-W42 | 9 | lightgbm | 0.22 | 0.21 | 0.22 | 5.04 | 0.00 | 11.17 | 7.00 |
-| Kegalle | 2026-W42 | 9 | lightgbm | 0.22 | 0.21 | 0.22 | 21.82 | 9.90 | 33.74 | 25.20 |
-| Hambantota | 2026-W43 | 10 | lightgbm | 0.19 | 0.16 | 0.20 | 8.14 | 0.48 | 15.81 | 10.00 |
-| Ratnapura | 2026-W43 | 10 | lightgbm | 0.19 | 0.16 | 0.20 | 28.66 | 14.85 | 42.46 | 42.00 |
-| Galle | 2026-W42 | 9 | lightgbm | 0.18 | 0.17 | 0.18 | 20.48 | 8.91 | 32.04 | 25.20 |
-| Colombo | 2026-W42 | 9 | lightgbm | 0.16 | 0.16 | 0.16 | 8.84 | 1.02 | 16.67 | 14.00 |
+| Kalutara | 2026-W43 | 10 | glm | 0.27 | 0.26 | 0.27 | 14.60 | 4.89 | 24.31 | 17.20 |
+| Nuwara Eliya | 2026-W43 | 10 | glm | 0.27 | 0.26 | 0.27 | 5.86 | 0.00 | 12.30 | 7.00 |
+| Kalutara | 2026-W42 | 9 | glm | 0.20 | 0.19 | 0.20 | 14.78 | 5.06 | 24.50 | 17.20 |
+| Kandy | 2026-W43 | 10 | glm | 0.20 | 0.18 | 0.20 | 7.40 | 0.28 | 14.53 | 9.00 |
+| Matara | 2026-W43 | 10 | glm | 0.20 | 0.18 | 0.20 | 12.51 | 3.47 | 21.54 | 15.00 |
+| Matara | 2026-W42 | 9 | glm | 0.19 | 0.19 | 0.19 | 11.90 | 3.12 | 20.69 | 15.00 |
+| Nuwara Eliya | 2026-W42 | 9 | glm | 0.19 | 0.19 | 0.19 | 5.36 | 0.00 | 11.52 | 7.00 |
+| Hambantota | 2026-W43 | 10 | glm | 0.18 | 0.17 | 0.18 | 7.90 | 0.57 | 15.24 | 10.00 |
+| Kegalle | 2026-W43 | 10 | glm | 0.17 | 0.17 | 0.18 | 18.97 | 7.99 | 29.96 | 25.20 |
+| Badulla | 2026-W43 | 10 | glm | 0.17 | 0.17 | 0.18 | 7.23 | 0.18 | 14.28 | 9.00 |
 
 ## Dengue
 
-Test origins 2024-W01 to 2026-W32 (136 origins x 26 districts x up to 10 horizons).
+Backtest origins 2024-W01 to 2026-W32 (136 origins x 26 districts x up to 10 horizons). **Models are selected on 2024 origins only; every number below is on the untouched 2025-26 origins** unless the heading says otherwise.
 
-### Headline: Brier skill vs persistence (BSS), MASE vs persistence, 90% interval coverage
+### Headline (test origins 2025-26): Brier skill vs persistence (BSS), MASE vs persistence, 90% interval coverage (static split-conformal)
 
 | model | h=1 BSS | h=1 MASE | h=1 cov90 % | h=2 BSS | h=2 MASE | h=2 cov90 % | h=9 (this week) BSS | h=9 (this week) MASE | h=9 (this week) cov90 % | h=10 (next week) BSS | h=10 (next week) MASE | h=10 (next week) cov90 % |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Persistence | 0.00 | 1.00 | 90.25 | 0.00 | 1.00 | 89.85 | 0.00 | 1.00 | 88.49 | 0.00 | 1.00 | 88.75 |
-| Seasonal climatology | -0.39 | 2.41 | 88.55 | -0.33 | 2.03 | 88.58 | 0.27 | 1.02 | 87.99 | 0.30 | 0.98 | 87.93 |
-| NB GLM / logistic | 0.20 | 1.43 | 90.66 | 0.19 | 1.29 | 90.53 | 0.28 | 0.97 | 88.84 | 0.31 | 0.95 | 88.78 |
-| LightGBM | 0.07 | 1.71 | 89.14 | 0.03 | 1.51 | 89.56 | 0.25 | 0.94 | 89.06 | 0.26 | 0.91 | 88.65 |
+| Persistence | 0.00 | 1.00 | 87.26 | 0.00 | 1.00 | 86.22 | 0.00 | 1.00 | 82.09 | 0.00 | 1.00 | 82.37 |
+| Seasonal climatology | -0.31 | 2.45 | 83.41 | -0.31 | 2.04 | 83.06 | 0.25 | 1.06 | 80.93 | 0.28 | 1.01 | 80.72 |
+| NB GLM / logistic | 0.28 | 1.35 | 86.73 | 0.26 | 1.24 | 85.98 | 0.37 | 0.99 | 81.98 | 0.38 | 0.96 | 81.94 |
+| LightGBM | 0.16 | 1.70 | 86.11 | 0.11 | 1.47 | 86.03 | 0.30 | 0.93 | 82.14 | 0.30 | 0.90 | 81.57 |
 
 ![skill](figures/outlook_dengue_skill.png)
 
-### Stop rule: does LightGBM beat persistence?
+### Model selection (2024 origins) -> what the dashboard shows
 
-Where it does not, the dashboard uses the best baseline at that horizon (and says so).
+Candidates: persistence, seasonal climatology, NB GLM / logistic, LightGBM. Counts are selected by MASE, P(elevated) by Brier, on 2024 origins only; any model within 0.01 of the best is a tie and the simplest of the tied models is kept (persistence < climatology < GLM < LightGBM). This replaces the earlier rule (LightGBM unless persistence beats it), which looked at all years and ignored the GLM.
 
-| h | lightgbm beats persistence (count) | lightgbm beats persistence (class) | dashboard count model | dashboard class model |
+| h | selected count model | count selection reason | selected probability model | probability selection reason |
 |---|---|---|---|---|
-| 1 | False | True | persistence | lightgbm |
-| 2 | False | True | persistence | lightgbm |
-| 3 | False | True | persistence | lightgbm |
-| 4 | False | True | persistence | lightgbm |
-| 5 | False | True | persistence | lightgbm |
-| 6 | True | True | lightgbm | lightgbm |
-| 7 | True | True | lightgbm | lightgbm |
-| 8 | True | True | lightgbm | lightgbm |
-| 9 | True | True | lightgbm | lightgbm |
-| 10 | True | True | lightgbm | lightgbm |
+| 1 | Persistence | MASE best on 2024 origins (1.000) | Persistence | Brier within 0.01 of the best on 2024 origins (glm 0.103, persistence 0.103); the simpler model is kept |
+| 2 | Persistence | MASE best on 2024 origins (1.000) | Persistence | Brier within 0.01 of the best on 2024 origins (glm 0.113, persistence 0.114); the simpler model is kept |
+| 3 | Persistence | MASE best on 2024 origins (1.000) | NB GLM / logistic | Brier best on 2024 origins (0.121) |
+| 4 | Persistence | MASE best on 2024 origins (1.000) | Persistence | Brier within 0.01 of the best on 2024 origins (glm 0.132, persistence 0.141); the simpler model is kept |
+| 5 | Persistence | MASE within 0.01 of the best on 2024 origins (glm 0.994, persistence 1.000); the simpler model is kept | Seasonal climatology | Brier within 0.01 of the best on 2024 origins (glm 0.146, climatology 0.148); the simpler model is kept |
+| 6 | NB GLM / logistic | MASE best on 2024 origins (0.943) | Seasonal climatology | Brier best on 2024 origins (0.140) |
+| 7 | NB GLM / logistic | MASE best on 2024 origins (0.913) | Seasonal climatology | Brier best on 2024 origins (0.140) |
+| 8 | NB GLM / logistic | MASE best on 2024 origins (0.911) | Seasonal climatology | Brier best on 2024 origins (0.135) |
+| 9 | NB GLM / logistic | MASE best on 2024 origins (0.911) | Seasonal climatology | Brier best on 2024 origins (0.133) |
+| 10 | Seasonal climatology | MASE best on 2024 origins (0.891) | Seasonal climatology | Brier best on 2024 origins (0.131) |
 
-**At h=1 (count), h=2 (count), h=3 (count), h=4 (count), h=5 (count) LightGBM does not beat persistence, so the dashboard shows the best baseline there.**
+How the selected models do on the untouched test (2025-26 origins):
 
-### Counts, every horizon
+| h | selected count model | its MASE (test) | LightGBM MASE (test) | selected probability model | its BSS vs persistence (test) | its BSS vs climatology (test) | LightGBM BSS vs persistence (test) |
+|---|---|---|---|---|---|---|---|
+| 1 | Persistence | 1.000 | 1.704 | Persistence | 0.000 | 0.237 | 0.162 |
+| 2 | Persistence | 1.000 | 1.473 | Persistence | 0.000 | 0.234 | 0.112 |
+| 3 | Persistence | 1.000 | 1.192 | NB GLM / logistic | 0.328 | 0.393 | 0.195 |
+| 4 | Persistence | 1.000 | 1.087 | Persistence | 0.000 | 0.081 | 0.176 |
+| 5 | Persistence | 1.000 | 1.013 | Seasonal climatology | 0.032 | 0.000 | 0.221 |
+| 6 | NB GLM / logistic | 0.965 | 0.962 | Seasonal climatology | 0.072 | 0.000 | 0.217 |
+| 7 | NB GLM / logistic | 0.969 | 0.941 | Seasonal climatology | 0.190 | 0.000 | 0.289 |
+| 8 | NB GLM / logistic | 0.975 | 0.930 | Seasonal climatology | 0.197 | 0.000 | 0.272 |
+| 9 | NB GLM / logistic | 0.987 | 0.933 | Seasonal climatology | 0.252 | 0.000 | 0.298 |
+| 10 | Seasonal climatology | 1.011 | 0.905 | Seasonal climatology | 0.283 | 0.000 | 0.302 |
 
-| model | h | n | MAE | RMSE | MASE vs persistence | coverage80 % | width80 | coverage90 % | width90 |
-|---|---|---|---|---|---|---|---|---|---|
-| LightGBM | 1 | 3406 | 22.582 | 73.359 | 1.708 | 80.094 | 40.189 | 89.137 | 55.907 |
-| NB GLM / logistic | 1 | 3406 | 18.948 | 47.979 | 1.433 | 81.474 | 42.127 | 90.664 | 58.705 |
-| Persistence | 1 | 3406 | 13.218 | 33.878 | 1.000 | 80.299 | 31.521 | 90.252 | 44.026 |
-| Seasonal climatology | 1 | 3406 | 31.874 | 92.954 | 2.411 | 80.358 | 53.726 | 88.550 | 79.645 |
-| LightGBM | 2 | 3380 | 23.395 | 74.644 | 1.505 | 81.124 | 42.403 | 89.556 | 58.486 |
-| NB GLM / logistic | 2 | 3380 | 20.009 | 53.671 | 1.288 | 82.456 | 44.219 | 90.533 | 60.460 |
-| Persistence | 2 | 3380 | 15.541 | 41.201 | 1.000 | 80.178 | 35.143 | 89.852 | 48.985 |
-| Seasonal climatology | 2 | 3380 | 31.550 | 92.153 | 2.030 | 80.621 | 53.580 | 88.580 | 79.360 |
-| LightGBM | 3 | 3354 | 24.135 | 76.491 | 1.237 | 81.306 | 43.731 | 89.505 | 60.029 |
-| NB GLM / logistic | 3 | 3354 | 21.513 | 61.062 | 1.102 | 81.902 | 45.323 | 90.280 | 62.658 |
-| Persistence | 3 | 3354 | 19.515 | 57.159 | 1.000 | 80.143 | 39.548 | 89.893 | 57.817 |
-| Seasonal climatology | 3 | 3354 | 31.325 | 91.841 | 1.605 | 80.620 | 53.459 | 88.521 | 79.055 |
-| LightGBM | 4 | 3328 | 24.764 | 77.566 | 1.125 | 81.761 | 45.176 | 89.423 | 62.118 |
-| NB GLM / logistic | 4 | 3328 | 22.947 | 67.236 | 1.042 | 82.272 | 46.544 | 90.234 | 64.995 |
-| Persistence | 4 | 3328 | 22.013 | 65.876 | 1.000 | 80.709 | 43.492 | 89.183 | 62.118 |
-| Seasonal climatology | 4 | 3328 | 31.045 | 91.153 | 1.410 | 80.649 | 53.404 | 88.492 | 78.863 |
-| LightGBM | 5 | 3302 | 25.635 | 79.539 | 1.045 | 81.496 | 46.474 | 89.431 | 63.710 |
-| NB GLM / logistic | 5 | 3302 | 24.346 | 73.101 | 0.993 | 82.314 | 48.036 | 89.945 | 67.260 |
-| Persistence | 5 | 3302 | 24.524 | 74.111 | 1.000 | 80.800 | 46.339 | 89.400 | 68.646 |
-| Seasonal climatology | 5 | 3302 | 30.932 | 91.089 | 1.261 | 80.739 | 53.431 | 88.340 | 78.808 |
-| LightGBM | 6 | 3276 | 26.382 | 80.916 | 0.988 | 81.624 | 48.063 | 89.652 | 65.794 |
-| NB GLM / logistic | 6 | 3276 | 25.679 | 77.877 | 0.962 | 82.295 | 49.474 | 89.744 | 70.659 |
-| Persistence | 6 | 3276 | 26.704 | 79.465 | 1.000 | 80.006 | 48.889 | 88.736 | 71.148 |
-| Seasonal climatology | 6 | 3276 | 30.755 | 91.054 | 1.152 | 80.922 | 53.521 | 88.156 | 78.831 |
-| LightGBM | 7 | 3250 | 27.031 | 82.045 | 0.957 | 82.215 | 49.730 | 89.446 | 67.335 |
-| NB GLM / logistic | 7 | 3250 | 27.040 | 81.617 | 0.957 | 82.462 | 51.939 | 89.662 | 74.486 |
-| Persistence | 7 | 3250 | 28.258 | 82.624 | 1.000 | 80.492 | 52.163 | 89.138 | 77.606 |
-| Seasonal climatology | 7 | 3250 | 30.747 | 91.248 | 1.088 | 80.985 | 53.667 | 88.092 | 78.928 |
-| LightGBM | 8 | 3224 | 27.698 | 83.116 | 0.940 | 82.382 | 50.377 | 89.392 | 68.957 |
-| NB GLM / logistic | 8 | 3224 | 28.306 | 84.767 | 0.961 | 82.816 | 53.981 | 89.175 | 78.467 |
-| Persistence | 8 | 3224 | 29.469 | 85.957 | 1.000 | 80.893 | 55.371 | 89.020 | 78.854 |
-| Seasonal climatology | 8 | 3224 | 30.767 | 91.502 | 1.044 | 80.924 | 53.827 | 88.120 | 79.087 |
-| LightGBM | 9 | 3198 | 28.355 | 84.208 | 0.936 | 81.707 | 51.374 | 89.056 | 70.115 |
-| NB GLM / logistic | 9 | 3198 | 29.363 | 87.318 | 0.969 | 83.208 | 55.937 | 88.837 | 82.592 |
-| Persistence | 9 | 3198 | 30.292 | 88.016 | 1.000 | 80.457 | 56.056 | 88.493 | 82.737 |
-| Seasonal climatology | 9 | 3198 | 30.858 | 91.827 | 1.019 | 80.894 | 54.060 | 87.992 | 79.232 |
-| LightGBM | 10 | 3172 | 28.924 | 85.211 | 0.911 | 81.337 | 51.932 | 88.651 | 70.711 |
-| NB GLM / logistic | 10 | 3172 | 30.280 | 89.249 | 0.954 | 83.449 | 58.214 | 88.777 | 87.229 |
-| Persistence | 10 | 3172 | 31.755 | 91.291 | 1.000 | 80.485 | 59.465 | 88.745 | 87.054 |
-| Seasonal climatology | 10 | 3172 | 30.983 | 92.175 | 0.976 | 80.990 | 54.304 | 87.926 | 79.467 |
+**At some horizons a selected model does not beat persistence on the test (MASE >= 1 or BSS <= 0); see the table.**
 
-### Elevated, every horizon
+### Counts, every horizon (test)
+
+| model | h | n | MAE | RMSE | MASE vs persistence | coverage80 % | width80 | coverage90 % | width90 | coverage80 ACI % | coverage90 ACI % | width90 ACI |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| LightGBM | 1 | 2080 | 25.493 | 89.372 | 1.704 | 76.971 | 34.952 | 86.106 | 48.825 | 78.894 | 89.087 | 71.737 |
+| NB GLM / logistic | 1 | 2080 | 20.265 | 55.435 | 1.354 | 76.394 | 36.000 | 86.731 | 50.032 | 78.798 | 89.087 | 81.446 |
+| Persistence | 1 | 2080 | 14.962 | 39.876 | 1.000 | 76.154 | 30.436 | 87.260 | 41.652 | 78.462 | 89.087 | 71.242 |
+| Seasonal climatology | 1 | 2080 | 36.679 | 111.080 | 2.452 | 73.990 | 43.548 | 83.413 | 62.609 | 78.077 | 88.894 | 103.588 |
+| LightGBM | 2 | 2054 | 26.608 | 91.740 | 1.473 | 77.410 | 35.859 | 86.027 | 50.213 | 78.092 | 89.094 | 87.885 |
+| NB GLM / logistic | 2 | 2054 | 22.315 | 64.276 | 1.236 | 76.826 | 36.889 | 85.979 | 50.336 | 78.286 | 88.900 | 89.445 |
+| Persistence | 2 | 2054 | 18.058 | 49.487 | 1.000 | 75.268 | 33.542 | 86.222 | 46.195 | 77.945 | 88.802 | 74.750 |
+| Seasonal climatology | 2 | 2054 | 36.790 | 111.614 | 2.037 | 74.099 | 43.035 | 83.057 | 61.614 | 77.848 | 89.192 | 104.917 |
+| LightGBM | 3 | 2028 | 27.861 | 94.664 | 1.192 | 76.578 | 36.263 | 85.404 | 50.468 | 77.022 | 88.264 | 97.743 |
+| NB GLM / logistic | 3 | 2028 | 24.946 | 74.854 | 1.067 | 75.542 | 37.124 | 84.961 | 51.022 | 77.170 | 88.116 | 94.060 |
+| Persistence | 3 | 2028 | 23.381 | 69.378 | 1.000 | 74.507 | 36.930 | 85.158 | 52.255 | 79.043 | 88.659 | 106.690 |
+| Seasonal climatology | 3 | 2028 | 36.895 | 112.138 | 1.578 | 73.718 | 42.555 | 82.742 | 60.598 | 76.824 | 88.215 | 112.554 |
+| LightGBM | 4 | 2002 | 28.799 | 96.764 | 1.087 | 76.823 | 36.991 | 84.815 | 51.312 | 75.874 | 87.163 | 99.373 |
+| NB GLM / logistic | 4 | 2002 | 27.215 | 83.719 | 1.028 | 75.774 | 37.834 | 84.765 | 51.234 | 76.274 | 87.313 | 98.353 |
+| Persistence | 4 | 2002 | 26.483 | 80.042 | 1.000 | 74.925 | 40.340 | 84.615 | 57.214 | 78.521 | 87.962 | 110.446 |
+| Seasonal climatology | 4 | 2002 | 37.011 | 112.733 | 1.398 | 73.427 | 42.153 | 82.418 | 59.740 | 76.024 | 87.313 | 114.254 |
+| LightGBM | 5 | 1976 | 30.017 | 99.699 | 1.013 | 76.265 | 37.643 | 84.211 | 51.092 | 75.354 | 85.931 | 91.057 |
+| NB GLM / logistic | 5 | 1976 | 29.318 | 91.709 | 0.990 | 75.152 | 38.498 | 84.109 | 51.325 | 75.304 | 85.779 | 107.736 |
+| Persistence | 5 | 1976 | 29.628 | 89.922 | 1.000 | 75.000 | 42.345 | 84.261 | 62.528 | 77.277 | 86.842 | 143.371 |
+| Seasonal climatology | 5 | 1976 | 37.199 | 113.368 | 1.256 | 73.431 | 41.829 | 81.984 | 59.035 | 75.152 | 86.589 | 119.248 |
+| LightGBM | 6 | 1950 | 31.068 | 101.799 | 0.962 | 76.000 | 38.337 | 83.846 | 52.327 | 74.667 | 84.667 | 90.830 |
+| NB GLM / logistic | 6 | 1950 | 31.162 | 98.127 | 0.965 | 74.974 | 38.832 | 83.692 | 51.701 | 74.000 | 84.718 | 118.721 |
+| Persistence | 6 | 1950 | 32.292 | 96.129 | 1.000 | 73.641 | 44.350 | 83.436 | 63.557 | 76.103 | 85.744 | 164.892 |
+| Seasonal climatology | 6 | 1950 | 37.414 | 114.046 | 1.159 | 73.333 | 41.588 | 81.538 | 58.473 | 74.410 | 85.436 | 108.951 |
+| LightGBM | 7 | 1950 | 31.736 | 102.797 | 0.941 | 76.667 | 39.553 | 83.128 | 52.800 | 74.410 | 84.051 | 86.853 |
+| NB GLM / logistic | 7 | 1950 | 32.703 | 102.466 | 0.969 | 74.462 | 39.621 | 83.744 | 52.259 | 73.795 | 84.205 | 104.322 |
+| Persistence | 7 | 1950 | 33.737 | 98.938 | 1.000 | 73.179 | 45.858 | 83.436 | 66.551 | 75.487 | 85.128 | 215.848 |
+| Seasonal climatology | 7 | 1950 | 37.414 | 114.046 | 1.109 | 73.333 | 41.645 | 81.538 | 58.317 | 73.590 | 86.615 | 114.832 |
+| LightGBM | 8 | 1924 | 32.652 | 104.371 | 0.930 | 76.403 | 39.639 | 82.744 | 53.455 | 73.649 | 83.836 | 83.175 |
+| NB GLM / logistic | 8 | 1924 | 34.235 | 106.572 | 0.975 | 74.896 | 40.046 | 82.848 | 52.986 | 74.064 | 85.447 | 100.675 |
+| Persistence | 8 | 1924 | 35.116 | 102.785 | 1.000 | 73.337 | 48.932 | 83.004 | 66.479 | 74.792 | 85.291 | 196.766 |
+| Seasonal climatology | 8 | 1924 | 37.711 | 114.781 | 1.074 | 73.077 | 41.576 | 81.341 | 58.076 | 73.753 | 86.383 | 110.366 |
+| LightGBM | 9 | 1898 | 33.575 | 105.966 | 0.933 | 75.342 | 40.106 | 82.139 | 54.123 | 73.762 | 85.458 | 92.172 |
+| NB GLM / logistic | 9 | 1898 | 35.506 | 109.876 | 0.987 | 74.816 | 40.918 | 81.981 | 53.930 | 74.974 | 85.195 | 100.559 |
+| Persistence | 9 | 1898 | 35.981 | 105.159 | 1.000 | 72.761 | 48.428 | 82.086 | 68.136 | 74.605 | 83.614 | 136.374 |
+| Seasonal climatology | 9 | 1898 | 38.054 | 115.543 | 1.058 | 72.866 | 41.530 | 80.927 | 57.836 | 74.816 | 86.143 | 105.827 |
+| LightGBM | 10 | 1872 | 34.306 | 107.335 | 0.905 | 74.840 | 40.465 | 81.571 | 54.205 | 76.068 | 86.378 | 95.672 |
+| NB GLM / logistic | 10 | 1872 | 36.399 | 112.234 | 0.960 | 75.427 | 41.941 | 81.944 | 54.776 | 75.908 | 85.791 | 96.893 |
+| Persistence | 10 | 1872 | 37.920 | 109.282 | 1.000 | 72.810 | 50.634 | 82.372 | 71.149 | 75.160 | 82.746 | 122.583 |
+| Seasonal climatology | 10 | 1872 | 38.350 | 116.299 | 1.011 | 72.810 | 41.540 | 80.716 | 57.742 | 76.335 | 86.218 | 106.460 |
+
+### Elevated, every horizon (test)
 
 | model | h | n_class | base rate % | Brier | BSS vs persistence | BSS vs climatology | recall | precision | AUROC | PR-AUC | mean p range |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| LightGBM | 1 | 3406 | 24.780 | 0.136 | 0.071 | 0.330 | 0.380 | 0.692 | 0.815 | 0.648 | 0.017 |
-| NB GLM / logistic | 1 | 3406 | 24.780 | 0.116 | 0.203 | 0.425 | 0.517 | 0.766 | 0.857 | 0.733 | 0.018 |
-| Persistence | 1 | 3406 | 24.780 | 0.146 | 0.000 | 0.279 | 0.704 | 0.706 | 0.804 | 0.570 |  |
-| Seasonal climatology | 1 | 3406 | 24.780 | 0.202 | -0.387 | 0.000 | 0.231 | 0.369 | 0.628 | 0.326 |  |
-| LightGBM | 2 | 3380 | 24.320 | 0.144 | 0.029 | 0.271 | 0.348 | 0.627 | 0.782 | 0.595 | 0.016 |
-| NB GLM / logistic | 2 | 3380 | 24.320 | 0.121 | 0.187 | 0.389 | 0.489 | 0.776 | 0.844 | 0.705 | 0.018 |
-| Persistence | 2 | 3380 | 24.320 | 0.149 | 0.000 | 0.249 | 0.702 | 0.692 | 0.801 | 0.558 |  |
-| Seasonal climatology | 2 | 3380 | 24.320 | 0.198 | -0.332 | 0.000 | 0.230 | 0.369 | 0.634 | 0.324 |  |
-| LightGBM | 3 | 3354 | 23.971 | 0.153 | 0.124 | 0.218 | 0.312 | 0.559 | 0.753 | 0.536 | 0.014 |
-| NB GLM / logistic | 3 | 3354 | 23.971 | 0.128 | 0.262 | 0.341 | 0.494 | 0.724 | 0.822 | 0.661 | 0.017 |
-| Persistence | 3 | 3354 | 23.971 | 0.174 | 0.000 | 0.107 | 0.633 | 0.638 | 0.760 | 0.492 |  |
-| Seasonal climatology | 3 | 3354 | 23.971 | 0.195 | -0.120 | 0.000 | 0.221 | 0.358 | 0.639 | 0.321 |  |
-| LightGBM | 4 | 3328 | 23.468 | 0.158 | 0.103 | 0.175 | 0.271 | 0.488 | 0.724 | 0.488 | 0.014 |
-| NB GLM / logistic | 4 | 3328 | 23.468 | 0.135 | 0.238 | 0.299 | 0.469 | 0.689 | 0.802 | 0.618 | 0.017 |
-| Persistence | 4 | 3328 | 23.468 | 0.177 | 0.000 | 0.080 | 0.634 | 0.621 | 0.758 | 0.480 |  |
-| Seasonal climatology | 4 | 3328 | 23.468 | 0.192 | -0.087 | 0.000 | 0.214 | 0.344 | 0.639 | 0.317 |  |
-| LightGBM | 5 | 3302 | 23.259 | 0.166 | 0.156 | 0.121 | 0.221 | 0.420 | 0.689 | 0.437 | 0.014 |
-| NB GLM / logistic | 5 | 3302 | 23.259 | 0.145 | 0.265 | 0.234 | 0.435 | 0.592 | 0.773 | 0.563 | 0.016 |
-| Persistence | 5 | 3302 | 23.259 | 0.197 | 0.000 | -0.042 | 0.573 | 0.577 | 0.723 | 0.430 |  |
-| Seasonal climatology | 5 | 3302 | 23.259 | 0.189 | 0.041 | 0.000 | 0.214 | 0.345 | 0.644 | 0.320 |  |
-| LightGBM | 6 | 3276 | 22.924 | 0.172 | 0.176 | 0.073 | 0.172 | 0.349 | 0.660 | 0.398 | 0.014 |
-| NB GLM / logistic | 6 | 3276 | 22.924 | 0.156 | 0.251 | 0.158 | 0.403 | 0.500 | 0.743 | 0.507 | 0.015 |
-| Persistence | 6 | 3276 | 22.924 | 0.208 | 0.000 | -0.124 | 0.543 | 0.546 | 0.705 | 0.401 |  |
-| Seasonal climatology | 6 | 3276 | 22.924 | 0.185 | 0.111 | 0.000 | 0.222 | 0.353 | 0.652 | 0.322 |  |
-| LightGBM | 7 | 3250 | 22.769 | 0.178 | 0.233 | 0.035 | 0.138 | 0.315 | 0.634 | 0.360 | 0.013 |
-| NB GLM / logistic | 7 | 3250 | 22.769 | 0.167 | 0.279 | 0.093 | 0.342 | 0.413 | 0.708 | 0.432 | 0.015 |
-| Persistence | 7 | 3250 | 22.769 | 0.232 | 0.000 | -0.258 | 0.477 | 0.490 | 0.665 | 0.353 |  |
-| Seasonal climatology | 7 | 3250 | 22.769 | 0.184 | 0.205 | 0.000 | 0.220 | 0.348 | 0.652 | 0.320 |  |
-| LightGBM | 8 | 3224 | 22.519 | 0.181 | 0.229 | 0.002 | 0.129 | 0.302 | 0.615 | 0.340 | 0.013 |
-| NB GLM / logistic | 8 | 3224 | 22.519 | 0.173 | 0.264 | 0.047 | 0.317 | 0.357 | 0.673 | 0.400 | 0.014 |
-| Persistence | 8 | 3224 | 22.519 | 0.235 | 0.000 | -0.294 | 0.468 | 0.478 | 0.660 | 0.343 |  |
-| Seasonal climatology | 8 | 3224 | 22.519 | 0.182 | 0.227 | 0.000 | 0.229 | 0.353 | 0.659 | 0.321 |  |
-| LightGBM | 9 | 3198 | 22.545 | 0.186 | 0.247 | -0.030 | 0.136 | 0.282 | 0.597 | 0.322 | 0.014 |
-| NB GLM / logistic | 9 | 3198 | 22.545 | 0.177 | 0.284 | 0.021 | 0.300 | 0.340 | 0.652 | 0.402 | 0.014 |
-| Persistence | 9 | 3198 | 22.545 | 0.247 | 0.000 | -0.368 | 0.419 | 0.449 | 0.635 | 0.319 |  |
-| Seasonal climatology | 9 | 3198 | 22.545 | 0.180 | 0.269 | 0.000 | 0.234 | 0.361 | 0.665 | 0.325 |  |
-| LightGBM | 10 | 3172 | 22.478 | 0.190 | 0.259 | -0.065 | 0.101 | 0.205 | 0.579 | 0.293 | 0.013 |
-| NB GLM / logistic | 10 | 3172 | 22.478 | 0.178 | 0.306 | 0.003 | 0.275 | 0.320 | 0.641 | 0.430 | 0.015 |
-| Persistence | 10 | 3172 | 22.478 | 0.256 | 0.000 | -0.437 | 0.393 | 0.424 | 0.619 | 0.303 |  |
-| Seasonal climatology | 10 | 3172 | 22.478 | 0.178 | 0.304 | 0.000 | 0.234 | 0.359 | 0.672 | 0.328 |  |
+| LightGBM | 1 | 2080 | 31.394 | 0.145 | 0.162 | 0.361 | 0.331 | 0.960 | 0.869 | 0.795 | 0.017 |
+| NB GLM / logistic | 1 | 2080 | 31.394 | 0.125 | 0.279 | 0.450 | 0.492 | 0.887 | 0.887 | 0.824 | 0.020 |
+| Persistence | 1 | 2080 | 31.394 | 0.173 | 0.000 | 0.237 | 0.714 | 0.729 | 0.796 | 0.610 |  |
+| Seasonal climatology | 1 | 2080 | 31.394 | 0.227 | -0.311 | 0.000 | 0.240 | 0.473 | 0.627 | 0.410 |  |
+| LightGBM | 2 | 2054 | 31.402 | 0.152 | 0.112 | 0.319 | 0.298 | 0.975 | 0.860 | 0.785 | 0.016 |
+| NB GLM / logistic | 2 | 2054 | 31.402 | 0.126 | 0.262 | 0.435 | 0.476 | 0.925 | 0.887 | 0.825 | 0.020 |
+| Persistence | 2 | 2054 | 31.402 | 0.171 | 0.000 | 0.234 | 0.719 | 0.732 | 0.799 | 0.615 |  |
+| Seasonal climatology | 2 | 2054 | 31.402 | 0.223 | -0.305 | 0.000 | 0.239 | 0.487 | 0.638 | 0.423 |  |
+| LightGBM | 3 | 2028 | 31.509 | 0.160 | 0.195 | 0.273 | 0.274 | 0.972 | 0.850 | 0.770 | 0.014 |
+| NB GLM / logistic | 3 | 2028 | 31.509 | 0.134 | 0.328 | 0.393 | 0.476 | 0.876 | 0.880 | 0.811 | 0.019 |
+| Persistence | 3 | 2028 | 31.509 | 0.199 | 0.000 | 0.097 | 0.651 | 0.698 | 0.761 | 0.564 |  |
+| Seasonal climatology | 3 | 2028 | 31.509 | 0.220 | -0.107 | 0.000 | 0.230 | 0.492 | 0.649 | 0.434 |  |
+| LightGBM | 4 | 2002 | 31.369 | 0.165 | 0.176 | 0.243 | 0.239 | 0.968 | 0.846 | 0.764 | 0.015 |
+| NB GLM / logistic | 4 | 2002 | 31.369 | 0.136 | 0.319 | 0.374 | 0.446 | 0.900 | 0.876 | 0.806 | 0.020 |
+| Persistence | 4 | 2002 | 31.369 | 0.200 | 0.000 | 0.081 | 0.654 | 0.691 | 0.760 | 0.560 |  |
+| Seasonal climatology | 4 | 2002 | 31.369 | 0.218 | -0.088 | 0.000 | 0.228 | 0.495 | 0.652 | 0.439 |  |
+| LightGBM | 5 | 1976 | 31.781 | 0.175 | 0.221 | 0.195 | 0.196 | 0.984 | 0.835 | 0.748 | 0.015 |
+| NB GLM / logistic | 5 | 1976 | 31.781 | 0.144 | 0.357 | 0.336 | 0.420 | 0.901 | 0.868 | 0.793 | 0.018 |
+| Persistence | 5 | 1976 | 31.781 | 0.224 | 0.000 | -0.033 | 0.596 | 0.664 | 0.728 | 0.524 |  |
+| Seasonal climatology | 5 | 1976 | 31.781 | 0.217 | 0.032 | 0.000 | 0.225 | 0.507 | 0.660 | 0.454 |  |
+| LightGBM | 6 | 1950 | 32.154 | 0.182 | 0.217 | 0.157 | 0.156 | 0.980 | 0.827 | 0.742 | 0.015 |
+| NB GLM / logistic | 6 | 1950 | 32.154 | 0.153 | 0.343 | 0.292 | 0.400 | 0.878 | 0.861 | 0.775 | 0.017 |
+| Persistence | 6 | 1950 | 32.154 | 0.232 | 0.000 | -0.077 | 0.573 | 0.660 | 0.716 | 0.515 |  |
+| Seasonal climatology | 6 | 1950 | 32.154 | 0.216 | 0.072 | 0.000 | 0.231 | 0.525 | 0.669 | 0.468 |  |
+| LightGBM | 7 | 1950 | 31.897 | 0.188 | 0.289 | 0.122 | 0.137 | 0.988 | 0.814 | 0.724 | 0.014 |
+| NB GLM / logistic | 7 | 1950 | 31.897 | 0.163 | 0.384 | 0.239 | 0.330 | 0.869 | 0.849 | 0.745 | 0.017 |
+| Persistence | 7 | 1950 | 31.897 | 0.265 | 0.000 | -0.235 | 0.505 | 0.602 | 0.674 | 0.462 |  |
+| Seasonal climatology | 7 | 1950 | 31.897 | 0.214 | 0.190 | 0.000 | 0.228 | 0.522 | 0.671 | 0.467 |  |
+| LightGBM | 8 | 1924 | 32.069 | 0.193 | 0.272 | 0.094 | 0.131 | 0.988 | 0.811 | 0.722 | 0.013 |
+| NB GLM / logistic | 8 | 1924 | 32.069 | 0.170 | 0.361 | 0.204 | 0.311 | 0.831 | 0.832 | 0.728 | 0.016 |
+| Persistence | 8 | 1924 | 32.069 | 0.266 | 0.000 | -0.245 | 0.501 | 0.604 | 0.673 | 0.462 |  |
+| Seasonal climatology | 8 | 1924 | 32.069 | 0.213 | 0.197 | 0.000 | 0.235 | 0.533 | 0.677 | 0.471 |  |
+| LightGBM | 9 | 1898 | 32.350 | 0.200 | 0.298 | 0.061 | 0.140 | 0.956 | 0.801 | 0.706 | 0.014 |
+| NB GLM / logistic | 9 | 1898 | 32.350 | 0.179 | 0.372 | 0.161 | 0.296 | 0.835 | 0.814 | 0.698 | 0.016 |
+| Persistence | 9 | 1898 | 32.350 | 0.285 | 0.000 | -0.337 | 0.445 | 0.578 | 0.645 | 0.437 |  |
+| Seasonal climatology | 9 | 1898 | 32.350 | 0.213 | 0.252 | 0.000 | 0.241 | 0.546 | 0.683 | 0.478 |  |
+| LightGBM | 10 | 1872 | 32.692 | 0.206 | 0.302 | 0.026 | 0.100 | 0.968 | 0.796 | 0.702 | 0.014 |
+| NB GLM / logistic | 10 | 1872 | 32.692 | 0.182 | 0.383 | 0.139 | 0.279 | 0.842 | 0.809 | 0.711 | 0.019 |
+| Persistence | 10 | 1872 | 32.692 | 0.295 | 0.000 | -0.395 | 0.422 | 0.566 | 0.632 | 0.428 |  |
+| Seasonal climatology | 10 | 1872 | 32.692 | 0.211 | 0.283 | 0.000 | 0.242 | 0.556 | 0.692 | 0.491 |  |
 
 ![reliability](figures/outlook_dengue_reliability.png)
 
+`mean p range` is the width of the Venn-Abers calibration range. It is narrow because the calibration pool is large and it describes calibration uncertainty only; outbreak uncertainty is carried by the count interval. The dashboard shows the range only in a tooltip, labelled 'calibration range'.
+
+### Count intervals: static split-conformal vs adaptive conformal (ACI)
+
+ACI (Gibbs & Candes 2021) keeps the same rolling pool of past-only scores but adapts the working miscoverage online: when a forecast's target is reported, the miscoverage moves by gamma = 0.005 x (nominal - miss), per forecast, with gamma fixed a priori. The dashboard uses ACI only if it brings 2026 coverage closer to nominal without moving 2024-25 coverage more than 2.5 points from nominal.
+
+| scope (selected count models, all horizons) | n | 80% static | 80% ACI | 90% static | 90% ACI | 90% width static | 90% width ACI |
+|---|---|---|---|---|---|---|---|
+| 2024-25 targets | 25090 | 87.2 | 81.1 | 94.7 | 90.9 | 67.0 | 161.6 |
+| 2026 targets | 7800 | 62.7 | 72.7 | 72.6 | 83.5 | 64.6 | 196.9 |
+| test (2025-26 origins) | 19734 | 74.8 | 76.5 | 84.1 | 86.8 | 52.7 | 103.4 |
+
+**ACI used: 2026 coverage 80/90 static 62.7/72.6% -> ACI 72.7/83.5% (closer to nominal); 2024-25 ACI 81.1/90.9% (within +-2.5 pp of nominal).**
+
 ### 2026 separately (targets in 2026)
 
-| model | h | n | MASE vs persistence | BSS vs persistence | BSS vs climatology | AUROC | coverage90 % |
-|---|---|---|---|---|---|---|---|
-| LightGBM | 1 | 780 | 1.931 | 0.117 | 0.422 | 0.816 | 73.974 |
-| NB GLM / logistic | 1 | 780 | 1.400 | 0.287 | 0.533 | 0.850 | 75.897 |
-| Persistence | 1 | 780 | 1.000 | 0.000 | 0.345 | 0.746 | 81.026 |
-| Seasonal climatology | 1 | 780 | 2.782 | -0.527 | 0.000 | 0.533 | 67.308 |
-| LightGBM | 2 | 780 | 1.604 | 0.003 | 0.382 | 0.807 | 72.821 |
-| NB GLM / logistic | 2 | 780 | 1.261 | 0.235 | 0.526 | 0.853 | 73.974 |
-| Persistence | 2 | 780 | 1.000 | 0.000 | 0.380 | 0.760 | 80.641 |
-| Seasonal climatology | 2 | 780 | 2.234 | -0.612 | 0.000 | 0.539 | 66.667 |
-| LightGBM | 9 | 780 | 1.031 | 0.156 | 0.038 | 0.716 | 64.744 |
-| NB GLM / logistic | 9 | 780 | 1.083 | 0.274 | 0.173 | 0.711 | 65.128 |
-| Persistence | 9 | 780 | 1.000 | 0.000 | -0.140 | 0.628 | 74.359 |
-| Seasonal climatology | 9 | 780 | 1.178 | 0.122 | 0.000 | 0.572 | 62.564 |
-| LightGBM | 10 | 780 | 1.003 | 0.154 | -0.007 | 0.720 | 64.615 |
-| NB GLM / logistic | 10 | 780 | 1.059 | 0.281 | 0.144 | 0.718 | 65.769 |
-| Persistence | 10 | 780 | 1.000 | 0.000 | -0.190 | 0.620 | 73.846 |
-| Seasonal climatology | 10 | 780 | 1.132 | 0.160 | 0.000 | 0.584 | 62.179 |
+| model | h | n | MASE vs persistence | BSS vs persistence | BSS vs climatology | AUROC | coverage90 % | coverage90 ACI % |
+|---|---|---|---|---|---|---|---|---|
+| LightGBM | 1 | 780 | 1.931 | 0.117 | 0.422 | 0.816 | 73.974 | 87.821 |
+| NB GLM / logistic | 1 | 780 | 1.383 | 0.287 | 0.533 | 0.850 | 76.026 | 87.564 |
+| Persistence | 1 | 780 | 1.000 | 0.000 | 0.345 | 0.746 | 81.026 | 88.333 |
+| Seasonal climatology | 1 | 780 | 2.782 | -0.527 | 0.000 | 0.533 | 67.308 | 88.974 |
+| LightGBM | 2 | 780 | 1.604 | 0.003 | 0.382 | 0.807 | 72.821 | 88.333 |
+| NB GLM / logistic | 2 | 780 | 1.251 | 0.235 | 0.526 | 0.853 | 74.103 | 87.821 |
+| Persistence | 2 | 780 | 1.000 | 0.000 | 0.380 | 0.760 | 80.641 | 88.846 |
+| Seasonal climatology | 2 | 780 | 2.234 | -0.612 | 0.000 | 0.539 | 66.667 | 89.615 |
+| LightGBM | 9 | 780 | 1.031 | 0.156 | 0.038 | 0.716 | 64.744 | 81.795 |
+| NB GLM / logistic | 9 | 780 | 1.073 | 0.274 | 0.173 | 0.711 | 65.897 | 80.897 |
+| Persistence | 9 | 780 | 1.000 | 0.000 | -0.140 | 0.628 | 74.359 | 77.564 |
+| Seasonal climatology | 9 | 780 | 1.178 | 0.122 | 0.000 | 0.572 | 62.564 | 82.949 |
+| LightGBM | 10 | 780 | 1.003 | 0.154 | -0.007 | 0.720 | 64.615 | 84.231 |
+| NB GLM / logistic | 10 | 780 | 1.048 | 0.281 | 0.144 | 0.718 | 66.667 | 80.897 |
+| Persistence | 10 | 780 | 1.000 | 0.000 | -0.190 | 0.620 | 73.846 | 76.667 |
+| Seasonal climatology | 10 | 780 | 1.132 | 0.160 | 0.000 | 0.584 | 62.179 | 82.308 |
 
 ### What drives LightGBM (live models, on their training rows)
 
@@ -425,16 +483,16 @@ Count (Poisson), top 8:
 
 | area | target_week | h | model | p_elevated | p_lo | p_hi | pred_count | lo90 | hi90 | elevated_threshold |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Kandy | 2026-W43 | 10 | lightgbm | 0.70 | 0.70 | 0.72 | 133.81 | 0.00 | 284.71 | 121.20 |
-| Kandy | 2026-W42 | 9 | lightgbm | 0.70 | 0.69 | 0.71 | 129.27 | 0.00 | 268.37 | 121.20 |
-| Kegalle | 2026-W42 | 9 | lightgbm | 0.52 | 0.51 | 0.52 | 51.54 | 0.00 | 139.88 | 50.00 |
-| Ampara | 2026-W42 | 9 | lightgbm | 0.52 | 0.51 | 0.52 | 16.25 | 0.00 | 66.88 | 12.00 |
-| Nuwara Eliya | 2026-W42 | 9 | lightgbm | 0.52 | 0.51 | 0.52 | 17.70 | 0.00 | 70.41 | 10.00 |
-| Kegalle | 2026-W43 | 10 | lightgbm | 0.49 | 0.49 | 0.49 | 55.82 | 0.00 | 153.78 | 50.00 |
-| Ampara | 2026-W43 | 10 | lightgbm | 0.49 | 0.49 | 0.49 | 16.46 | 0.00 | 70.77 | 12.00 |
-| Nuwara Eliya | 2026-W43 | 10 | lightgbm | 0.49 | 0.49 | 0.49 | 18.10 | 0.00 | 74.90 | 10.00 |
-| Colombo | 2026-W43 | 10 | lightgbm | 0.43 | 0.42 | 0.43 | 305.51 | 77.98 | 533.04 | 348.20 |
-| Gampaha | 2026-W43 | 10 | lightgbm | 0.43 | 0.42 | 0.43 | 247.68 | 42.73 | 452.62 | 217.80 |
+| Puttalam | 2026-W43 | 10 | climatology | 0.50 |  |  | 29.10 | 0.00 | 114.62 | 26.80 |
+| Monaragala | 2026-W42 | 9 | climatology | 0.44 |  |  | 21.22 | 0.00 | 94.71 | 27.00 |
+| Puttalam | 2026-W42 | 9 | climatology | 0.44 |  |  | 22.00 | 0.00 | 96.76 | 26.80 |
+| Monaragala | 2026-W43 | 10 | climatology | 0.40 |  |  | 23.50 | 0.00 | 100.66 | 27.00 |
+| Matale | 2026-W42 | 9 | climatology | 0.33 |  |  | 25.89 | 0.00 | 106.72 | 38.00 |
+| Kalmunai | 2026-W42 | 9 | climatology | 0.33 |  |  | 14.22 | 0.00 | 75.04 | 26.40 |
+| Jaffna | 2026-W43 | 10 | climatology | 0.30 |  |  | 33.90 | 0.00 | 125.99 | 46.40 |
+| Kalmunai | 2026-W43 | 10 | climatology | 0.30 |  |  | 17.50 | 0.00 | 84.55 | 26.40 |
+| Matale | 2026-W43 | 10 | climatology | 0.30 |  |  | 30.00 | 0.00 | 116.79 | 38.00 |
+| Badulla | 2026-W42 | 9 | climatology | 0.22 |  |  | 11.89 | 0.00 | 67.85 | 25.00 |
 
 ## Dengue: 2026 forecasts vs NDCU district flags
 
@@ -442,21 +500,21 @@ Forecast elevated (dashboard class model at that horizon, P >= 0.5) vs NDCU: a d
 
 | h | model | NDCU-positive | district-weeks | both | agreement % | kappa | share of NDCU flags forecast % | share of forecasts flagged % | NDCU onsets | onsets forecast within +-4 wk |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | lightgbm | >= 1 MOH | 780 | 177 | 70.4 | 0.39 | 48.4 | 80.8 | 66 | 34 |
+| 1 | persistence | >= 1 MOH | 780 | 295 | 68.6 | 0.38 | 80.6 | 62.9 | 66 | 58 |
 | 1 | observed (truth) | >= 1 MOH | 780 | 303 | 70.1 | 0.41 | 82.8 | 64.1 | 66 | 58 |
-| 1 | lightgbm | >= 3 MOH | 780 | 132 | 80.3 | 0.50 | 66.3 | 60.3 | 35 | 32 |
+| 1 | persistence | >= 3 MOH | 780 | 182 | 61.0 | 0.29 | 91.5 | 38.8 | 35 | 34 |
 | 1 | observed (truth) | >= 3 MOH | 780 | 184 | 61.0 | 0.29 | 92.5 | 38.9 | 35 | 34 |
-| 2 | lightgbm | >= 1 MOH | 780 | 162 | 69.9 | 0.38 | 44.3 | 83.9 | 66 | 26 |
+| 2 | persistence | >= 1 MOH | 780 | 294 | 67.3 | 0.36 | 80.3 | 61.6 | 66 | 56 |
 | 2 | observed (truth) | >= 1 MOH | 780 | 304 | 70.4 | 0.42 | 83.1 | 64.3 | 66 | 58 |
-| 2 | lightgbm | >= 3 MOH | 780 | 124 | 81.5 | 0.51 | 62.3 | 64.2 | 35 | 29 |
+| 2 | persistence | >= 3 MOH | 780 | 181 | 59.7 | 0.27 | 91.0 | 37.9 | 35 | 34 |
 | 2 | observed (truth) | >= 3 MOH | 780 | 185 | 61.3 | 0.30 | 93.0 | 39.1 | 35 | 34 |
-| 9 | lightgbm | >= 1 MOH | 780 | 78 | 61.5 | 0.19 | 21.3 | 86.7 | 66 | 12 |
+| 9 | climatology | >= 1 MOH | 780 | 109 | 57.1 | 0.11 | 29.8 | 58.3 | 66 | 39 |
 | 9 | observed (truth) | >= 1 MOH | 780 | 309 | 71.7 | 0.44 | 84.4 | 65.3 | 66 | 57 |
-| 9 | lightgbm | >= 3 MOH | 780 | 65 | 79.6 | 0.35 | 32.7 | 72.2 | 35 | 11 |
+| 9 | climatology | >= 3 MOH | 780 | 48 | 62.8 | 0.00 | 24.1 | 25.7 | 35 | 19 |
 | 9 | observed (truth) | >= 3 MOH | 780 | 190 | 62.6 | 0.32 | 95.5 | 40.2 | 35 | 34 |
-| 10 | lightgbm | >= 1 MOH | 780 | 56 | 59.4 | 0.14 | 15.3 | 88.9 | 66 | 5 |
+| 10 | climatology | >= 1 MOH | 780 | 110 | 57.6 | 0.12 | 30.1 | 59.5 | 66 | 38 |
 | 10 | observed (truth) | >= 1 MOH | 780 | 310 | 71.7 | 0.44 | 84.7 | 65.3 | 66 | 57 |
-| 10 | lightgbm | >= 3 MOH | 780 | 50 | 79.2 | 0.30 | 25.1 | 79.4 | 35 | 7 |
+| 10 | climatology | >= 3 MOH | 780 | 47 | 62.8 | -0.00 | 23.6 | 25.4 | 35 | 19 |
 | 10 | observed (truth) | >= 3 MOH | 780 | 191 | 62.6 | 0.32 | 96.0 | 40.2 | 35 | 34 |
 
 ## Limitations
