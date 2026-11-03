@@ -321,3 +321,14 @@ def test_held_back_label_comes_from_config_and_tier_decision_is_written(tmp_path
     monkeypatch.setattr(lb, "CONFIG_PATH", cfg)
     lb.write_tiers_adopted(True, "union 4.1/100")
     assert "  tiers_adopted: true   # union 4.1/100" in cfg.read_text(encoding="utf-8")
+
+
+def test_nb_fit_cache_signature_changes_when_new_weeks_arrive():
+    import pandas as pd
+
+    from radar_lk.radar.run import data_signature
+
+    panel = pd.DataFrame({"t": [0, 1, 2], "observed": [3.0, None, 5.0]})
+    more = pd.concat([panel, pd.DataFrame({"t": [3], "observed": [4.0]})], ignore_index=True)
+    assert data_signature(panel) == (2, 2, 8)
+    assert data_signature(more) != data_signature(panel)  # cached fits would be refitted

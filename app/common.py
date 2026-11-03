@@ -43,7 +43,7 @@ JUMPS = {
 }
 OUTAGE = (
     "epid.gov.lk was unavailable to scripted downloads from late October into early November "
-    "2026, so no newer issue could be fetched."
+    "2026; it answered again on 3 November, when the data were frozen."
 )
 
 
@@ -54,6 +54,7 @@ def cfg() -> dict:
         "L": int(c["publication_lag_weeks"]),
         "labels": lb.labels(),
         "diseases": c["outlook"]["diseases"],
+        "freeze": c.get("data_freeze") or {},
     }
 
 
@@ -186,6 +187,10 @@ def banner(week: str) -> None:
         f"{week_end(lw):%d %b %Y}). Today is {today:%d %b %Y}, {lag_days} days later; the WER "
         f"normally appears about {c['L']} weeks after the week ends. {OUTAGE}"
     )
+    fz = c["freeze"]
+    if fz:
+        d = fz["date"] if isinstance(fz["date"], date) else date.fromisoformat(str(fz["date"]))
+        msg = f"**Data freeze: {fz['week']}, {d.day} {d:%b %Y}.** " + msg
     if week != lw:
         msg = f"**Replay: viewing as of {week}.** " + msg
     if lag_days > 7 * (c["L"] + 2):

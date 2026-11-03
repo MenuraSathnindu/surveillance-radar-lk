@@ -1,10 +1,10 @@
 # Cross-extraction check (pdfplumber vs PyMuPDF)
 
-Generated 2026-11-02 10:01 UTC by `python scripts/cross_extract.py`.
+Generated 2026-11-03 08:35 UTC by `python scripts/cross_extract.py`.
 
 Every Table 1 cell of every parsed WER issue (26 RDHS + SRI LANKA, every A/B column, T\* and C\*\*) was extracted a second time with PyMuPDF, using its own word boxes, row clustering and cell order, and compared with the pdfplumber parser.
 
-- Cells compared: **177,876** from 241 issues
+- Cells compared: **180,306** from 244 issues
 - Agreement: **100.000%**; disagreements: **0** (all listed in `data/review_queue/cross_extract.csv`)
 - Of the agreeing cells, 6 are blank or unreadable in both extractors (e.g. a stray `v` where a digit should be); they stay in review.
 - Both libraries read the PDF's embedded text layer, so this rules out parser bugs (row, column and token handling) but not a text layer that differs from the printed page; the hand-check pack covers that.
@@ -20,7 +20,7 @@ Every Table 1 cell of every parsed WER issue (26 RDHS + SRI LANKA, every A/B col
 | 2023 | 36,504 | 100.000 |
 | 2024 | 38,070 | 100.000 |
 | 2025 | 39,366 | 100.000 |
-| 2026 | 26,730 | 100.000 |
+| 2026 | 29,160 | 100.000 |
 
 ## Disagreements
 

@@ -8,9 +8,15 @@
 
 Idempotent: each step records a fingerprint of its inputs in data/logs/pipeline_state.json and is
 skipped when the inputs have not changed since its last successful run (download and weather
-always run, and only fetch what is new). A failed download (e.g. the source site is down) is
-logged and the run continues on the data already on disk; the dashboard's stale-data banner then
-shows how old the latest WER issue is. Every run writes data/logs/pipeline_<timestamp>.log.
+always run, and only fetch what is new). A step's entry is removed from the state BEFORE it runs
+and written back only after it exits 0, so a step that fails or is killed half-way is never
+recorded as done and the next run redoes it. The state file is written atomically.
+
+A failed download (e.g. the source site is down) is logged and the run continues on the data
+already on disk (exit 0; the dashboard's stale-data banner then shows how old the latest WER issue
+is). A failed weather step (e.g. a district without weather) also lets the run continue on the
+previous weather file, but the run exits 1. Any other failure stops the run (exit 1). Every run
+writes data/logs/pipeline_<timestamp>.log.
 """
 
 from __future__ import annotations
@@ -54,6 +60,22 @@ INPUTS = {
         CLEAN_DIR / "outlook_forecasts.parquet",
     ],
 }
+
+
+def load_state() -> dict:
+    """The recorded fingerprints; an unreadable state file counts as empty (everything reruns)."""
+    try:
+        return json.loads(STATE.read_text(encoding="utf-8")) if STATE.exists() else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_state(state: dict) -> None:
+    """Atomic write: a kill mid-write leaves the old file, never a truncated one."""
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = STATE.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    tmp.replace(STATE)
 
 
 def commands(with_backtests: bool) -> dict[str, list[list[str]]]:
@@ -111,7 +133,7 @@ def main(argv=None) -> int:
     if not steps or any(s not in STEPS for s in steps):
         ap.error(f"choose --all or --steps from {STEPS}")
     log = Log()
-    state = json.loads(STATE.read_text()) if STATE.exists() else {}
+    state = load_state()
     cmds = commands(a.with_backtests)
     failed = []
     log(f"pipeline start: steps {steps}{' (forced)' if a.force else ''}")
@@ -120,6 +142,8 @@ def main(argv=None) -> int:
         if fp and not a.force and state.get(s) == fp:
             log(f"[{s}] inputs unchanged since the last successful run: skipped")
             continue
+        if state.pop(s, None) is not None:
+            save_state(state)  # not "done" again until this run of the step succeeds
         t0 = time.time()
         rc = 0
         for cmd in cmds[s]:
@@ -135,11 +159,11 @@ def main(argv=None) -> int:
             break
         if fp:
             state[s] = fp
-            STATE.write_text(json.dumps(state, indent=2))
+            save_state(state)
         log(f"[{s}] ok ({dt:.0f}s)")
     status = "failed: " + ", ".join(failed) if failed else "all steps ok"
     log(f"pipeline end: {status}; log {log.path}")
-    return 1 if any(s not in ("download", "weather") for s in failed) else 0
+    return 1 if any(s != "download" for s in failed) else 0
 
 
 if __name__ == "__main__":

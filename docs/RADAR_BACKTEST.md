@@ -8,7 +8,7 @@ Generated 2026-11-03 by `python -m radar_lk.radar.run` then `python -m radar_lk.
 
 ## Data and design
 
-- **Post-COVID baseline.** Only `extraction_valid` RDHS rows from **2022-W01** to 2026-W33 (Vol 53 No 34).
+- **Post-COVID baseline.** Only `extraction_valid` RDHS rows from **2022-W01** to 2026-W36 (Vol 53 No 37).
 - **Weekly counts as first printed** in each issue, never later back-filled values.
 - **Series:** 338 RDHS x disease series with >= 104 observed weeks; not modelled (insufficient history): 26 (leprosy x26).
 - **No lookahead.** Every method uses only weeks before t (tested).
@@ -29,14 +29,14 @@ For every series, 200 outbreak-free years are simulated from its own fitted NB b
 
 | method | default threshold | sensitivity % | sensitivity after gating % | false alerts / 100 (null) | specificity % (null) | alert rate / 100 (real data) | median delay (weeks) |
 |---|---|---|---|---|---|---|---|
-| Status quo (2x last year) | 2 | 71.0 | 69.8 | 13.7 | 86.3 | 10.8 | 0.0 |
-| EARS C2 | 3 | 52.6 | 51.5 | 3.0 | 97.0 | 2.9 | 0.0 |
-| EARS C3 | 2 | 59.0 | 57.9 | 6.5 | 93.5 | 6.0 | 0.0 |
+| Status quo (2x last year) | 2 | 71.0 | 69.8 | 13.7 | 86.3 | 10.7 | 0.0 |
+| EARS C2 | 3 | 52.6 | 51.5 | 3.0 | 97.0 | 2.8 | 0.0 |
+| EARS C3 | 2 | 59.0 | 57.9 | 6.5 | 93.5 | 5.9 | 0.0 |
 | NB-GLM (Farrington-style) | 0.98 | 49.0 | 48.1 | 2.0 | 98.0 | 1.6 | 0.0 |
 
 Sensitivity uses 2600 injected outbreaks (200 per disease, seed 20261104): start 2024 onwards, 1-4 weeks, total size ~ NB (dispersion 2) with mean k x the series' SD, k uniform on 1..10. Delay = weeks from outbreak start to first alert (0 = first week). **Alert rate (real data)** counts all alerts on the real series; it is not a false-alert rate, because real rises are in it.
 
-**Usability bar.** The proposal's bar is that an alert should fire in at most 10% of district-weeks. The status-quo rule fires in 10.8 per 100 real district-weeks (13.7 per 100 even with no outbreak at all), so the rule currently used by eye would itself break that bar.
+**Usability bar.** The proposal's bar is that an alert should fire in at most 10% of district-weeks. The status-quo rule fires in 10.7 per 100 real district-weeks (13.7 per 100 even with no outbreak at all), so the rule currently used by eye would itself break that bar.
 
 ## b) Matched comparison: sensitivity at the same false-alert rate
 
@@ -124,21 +124,21 @@ Per disease, alerts per 100 district-weeks at the default thresholds: real data,
 
 | disease | Status quo (2x last year) | EARS C2 | EARS C3 | NB-GLM (Farrington-style) | Status quo (2x last year) (null) | EARS C2 (null) | EARS C3 (null) | NB-GLM (Farrington-style) (null) |
 |---|---|---|---|---|---|---|---|---|
-| chickenpox | 29.5 | 4.8 | 11.7 | 1.5 | 36.1 | 4.5 | 13.0 | 3.2 |
-| dengue | 25.7 | 10.6 | 23.6 | 5.7 | 31.3 | 7.8 | 19.3 | 3.6 |
-| dysentery | 7.1 | 1.7 | 2.7 | 1.4 | 10.1 | 2.4 | 4.1 | 2.2 |
+| chickenpox | 29.0 | 4.7 | 11.6 | 1.5 | 36.1 | 4.5 | 13.0 | 3.2 |
+| dengue | 26.0 | 10.3 | 23.1 | 5.5 | 31.3 | 7.8 | 19.3 | 3.6 |
+| dysentery | 7.0 | 1.6 | 2.7 | 1.4 | 10.1 | 2.4 | 4.1 | 2.2 |
 | encephalitis | 0.8 | 0.1 | 0.2 | 0.4 | 1.1 | 0.2 | 0.4 | 0.5 |
-| enteric_fever | 0.6 | 0.2 | 0.3 | 0.4 | 0.8 | 0.3 | 0.4 | 0.5 |
-| food_poisoning | 8.6 | 4.1 | 5.2 | 2.3 | 13.5 | 5.9 | 7.4 | 3.8 |
+| enteric_fever | 0.5 | 0.2 | 0.3 | 0.4 | 0.8 | 0.3 | 0.4 | 0.5 |
+| food_poisoning | 8.5 | 4.0 | 5.1 | 2.3 | 13.5 | 5.9 | 7.4 | 3.8 |
 | human_rabies | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
-| leishmaniasis | 11.0 | 1.9 | 4.5 | 1.1 | 11.7 | 2.3 | 5.2 | 1.8 |
-| leptospirosis | 22.7 | 6.5 | 14.5 | 2.2 | 28.3 | 6.1 | 15.1 | 3.1 |
-| meningitis | 14.3 | 2.8 | 5.0 | 2.0 | 18.9 | 3.7 | 6.9 | 2.6 |
-| tuberculosis | 19.3 | 3.6 | 7.8 | 2.4 | 18.4 | 3.7 | 8.9 | 2.7 |
-| typhus | 4.0 | 0.8 | 1.9 | 0.7 | 4.2 | 1.1 | 2.2 | 1.1 |
-| viral_hepatitis | 2.2 | 0.5 | 0.8 | 1.3 | 3.2 | 0.9 | 1.3 | 1.0 |
+| leishmaniasis | 10.8 | 1.9 | 4.5 | 1.1 | 11.7 | 2.3 | 5.2 | 1.8 |
+| leptospirosis | 22.3 | 6.4 | 14.1 | 2.1 | 28.3 | 6.1 | 15.1 | 3.1 |
+| meningitis | 14.1 | 2.7 | 4.9 | 2.0 | 18.9 | 3.7 | 6.9 | 2.6 |
+| tuberculosis | 19.5 | 3.6 | 7.8 | 2.4 | 18.4 | 3.7 | 8.9 | 2.7 |
+| typhus | 3.9 | 0.8 | 1.8 | 0.7 | 4.2 | 1.1 | 2.2 | 1.1 |
+| viral_hepatitis | 2.3 | 0.6 | 0.9 | 1.4 | 3.2 | 0.9 | 1.3 | 1.0 |
 
-**Stop rule** (NB-GLM <= 10% of district-weeks): 1.57 per 100 at the 98th percentile; the a-priori quantile was kept.
+**Stop rule** (NB-GLM <= 10% of district-weeks): 1.54 per 100 at the 98th percentile; the a-priori quantile was kept.
 
 ## d) Known-event replay
 
@@ -386,61 +386,61 @@ The proposal's target: alerts suppressed for low reporting completeness should b
 
 | method | alerts | n | next week revised % | n (revision known) | next week cum raised % (delta > 0) | median next-week revision_delta | next 2 weeks above expected % | n (2-week follow-up known) |
 |---|---|---|---|---|---|---|---|---|
-| Status quo (2x last year) | suppressed | 303 | 20.9 | 282 | 18.8 | 0.0 | 51.7 | 267 |
-| Status quo (2x last year) | kept | 6246 | 8.3 | 5711 | 5.7 | 0.0 | 48.1 | 5240 |
-| EARS C2 | suppressed | 84 | 21.5 | 79 | 19.0 | 0.0 | 57.7 | 78 |
-| EARS C2 | kept | 1864 | 9.2 | 1730 | 6.2 | 0.0 | 53.0 | 1641 |
-| EARS C3 | suppressed | 190 | 24.0 | 183 | 22.4 | 0.0 | 47.8 | 182 |
-| EARS C3 | kept | 3847 | 10.0 | 3620 | 7.7 | 0.0 | 45.0 | 3441 |
+| Status quo (2x last year) | suppressed | 326 | 19.6 | 301 | 17.6 | 0.0 | 51.9 | 283 |
+| Status quo (2x last year) | kept | 6298 | 8.2 | 5780 | 5.6 | 0.0 | 47.8 | 5346 |
+| EARS C2 | suppressed | 86 | 21.0 | 81 | 18.5 | 0.0 | 57.0 | 79 |
+| EARS C2 | kept | 1868 | 9.2 | 1738 | 6.2 | 0.0 | 52.9 | 1648 |
+| EARS C3 | suppressed | 197 | 23.2 | 190 | 21.6 | 0.0 | 46.5 | 187 |
+| EARS C3 | kept | 3857 | 10.0 | 3633 | 7.7 | 0.0 | 44.8 | 3454 |
 | NB-GLM (Farrington-style) | suppressed | 41 | 8.3 | 36 | 2.8 | 0.0 | 58.3 | 36 |
-| NB-GLM (Farrington-style) | kept | 1085 | 9.9 | 1003 | 5.8 | 0.0 | 50.6 | 953 |
-| all methods | suppressed | 618 | 21.2 | 580 | 19.0 | 0.0 | 51.7 | 563 |
-| all methods | kept | 13042 | 9.1 | 12064 | 6.4 | 0.0 | 48.1 | 11275 |
+| NB-GLM (Farrington-style) | kept | 1088 | 9.8 | 1010 | 5.7 | 0.0 | 50.3 | 961 |
+| all methods | suppressed | 650 | 20.2 | 608 | 18.1 | 0.0 | 51.3 | 585 |
+| all methods | kept | 13111 | 9.0 | 12161 | 6.3 | 0.0 | 47.8 | 11409 |
 
-Result, all methods pooled (n = 618 suppressed vs 13042 kept alerts):
+Result, all methods pooled (n = 650 suppressed vs 13111 kept alerts):
 
-1. **The completeness flag does mark incomplete weeks.** After a suppressed alert the next week's cumulative was revised in 21% of cases vs 9% after kept alerts, and raised (late cases added) in 19% vs 6%.
-2. **But the suppressed alerts do not look like artefacts.** The next 2 weeks stayed above expected after 52% of suppressed alerts vs 48% of kept ones. Late reports add cases, so a rise seen in an incomplete week is, if anything, understated, not invented.
+1. **The completeness flag does mark incomplete weeks.** After a suppressed alert the next week's cumulative was revised in 20% of cases vs 9% after kept alerts, and raised (late cases added) in 18% vs 6%.
+2. **But the suppressed alerts do not look like artefacts.** The next 2 weeks stayed above expected after 51% of suppressed alerts vs 48% of kept ones. Late reports add cases, so a rise seen in an incomplete week is, if anything, understated, not invented.
 
 **Verdict: the proposal's target (gating removes alerts that prove to be artefacts) is not met.** Gating holds back alerts that persist as often as the others. Held-back alerts are therefore **shown, greyed out, never hidden**, labelled: "Possible rise, held back: reporting completeness low (X%). Late reports usually add cases, so the true rise may be larger." (X = that week's C**; wording in config `radar_display.labels`, shared by the dashboard and the brief). Gating is not counted as a precision gain.
 The suppressed group is small, so these percentages are imprecise.
 
 ## f) External validation: dengue radar vs NDCU 2026 high-risk MOH lists
 
-District x week pairs in 2026 where both exist (weeks 1-33). A district is NDCU-positive when at least 1 (or 3) of its MOH areas is on the list. NDCU flags absolute burden; the radar flags what is unusual for the district and season.
+District x week pairs in 2026 where both exist (weeks 1-36). A district is NDCU-positive when at least 1 (or 3) of its MOH areas is on the list. NDCU flags absolute burden; the radar flags what is unusual for the district and season.
 
 ### NDCU-positive = >= 1 MOH area(s) flagged
 
 | method | district-weeks | both | radar only | NDCU only | neither | agreement % | kappa | radar sensitivity vs NDCU % | share of radar alerts with NDCU flag % | NDCU onsets | onsets with a radar alert within +-4 wk | median lag (radar - NDCU, wk) | radar earlier | same week | radar later |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Status quo (2x last year) | 754 | 219 | 118 | 138 | 279 | 66.0 | 0.32 | 61.3 | 65.0 | 65 | 48 | 0.0 | 7 | 31 | 10 |
-| EARS C2 | 780 | 103 | 25 | 263 | 389 | 63.1 | 0.23 | 28.1 | 80.5 | 66 | 42 | 0.0 | 6 | 20 | 16 |
-| EARS C3 | 780 | 191 | 81 | 175 | 333 | 67.2 | 0.33 | 52.2 | 70.2 | 66 | 47 | 0.0 | 5 | 30 | 12 |
-| NB-GLM (Farrington-style) | 780 | 120 | 14 | 246 | 400 | 66.7 | 0.31 | 32.8 | 89.6 | 66 | 28 | 0.0 | 4 | 13 | 11 |
+| Status quo (2x last year) | 832 | 226 | 131 | 159 | 316 | 65.1 | 0.30 | 58.7 | 63.3 | 69 | 52 | 0.0 | 9 | 32 | 11 |
+| EARS C2 | 858 | 103 | 25 | 291 | 439 | 63.2 | 0.22 | 26.1 | 80.5 | 70 | 42 | 0.0 | 6 | 20 | 16 |
+| EARS C3 | 858 | 191 | 81 | 203 | 383 | 66.9 | 0.32 | 48.5 | 70.2 | 70 | 48 | 0.0 | 6 | 30 | 12 |
+| NB-GLM (Farrington-style) | 858 | 120 | 14 | 274 | 450 | 66.4 | 0.29 | 30.5 | 89.6 | 70 | 30 | 0.0 | 6 | 13 | 11 |
 
-NB-GLM pooled correlation of the weekly 0/1 series at lag L (L < 0: radar leads): L=-4: 0.07, L=-3: 0.14, L=-2: 0.22, L=-1: 0.31, L=0: 0.30, L=1: 0.31, L=2: 0.29, L=3: 0.23, L=4: 0.16. Peak at L = 1.
+NB-GLM pooled correlation of the weekly 0/1 series at lag L (L < 0: radar leads): L=-4: 0.04, L=-3: 0.11, L=-2: 0.22, L=-1: 0.31, L=0: 0.30, L=1: 0.30, L=2: 0.29, L=3: 0.23, L=4: 0.13. Peak at L = -1.
 
 ### NDCU-positive = >= 3 MOH area(s) flagged
 
 | method | district-weeks | both | radar only | NDCU only | neither | agreement % | kappa | radar sensitivity vs NDCU % | share of radar alerts with NDCU flag % | NDCU onsets | onsets with a radar alert within +-4 wk | median lag (radar - NDCU, wk) | radar earlier | same week | radar later |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Status quo (2x last year) | 754 | 131 | 206 | 65 | 352 | 64.1 | 0.24 | 66.8 | 38.9 | 34 | 31 | 0.0 | 3 | 22 | 6 |
-| EARS C2 | 780 | 65 | 63 | 134 | 518 | 74.7 | 0.25 | 32.7 | 50.8 | 35 | 28 | 0.0 | 4 | 17 | 7 |
-| EARS C3 | 780 | 123 | 149 | 76 | 432 | 71.2 | 0.32 | 61.8 | 45.2 | 35 | 34 | 0.0 | 5 | 24 | 5 |
-| NB-GLM (Farrington-style) | 780 | 88 | 46 | 111 | 535 | 79.9 | 0.41 | 44.2 | 65.7 | 35 | 22 | 0.0 | 2 | 14 | 6 |
+| Status quo (2x last year) | 832 | 133 | 224 | 75 | 400 | 64.1 | 0.23 | 63.9 | 37.3 | 34 | 31 | 0.0 | 3 | 22 | 6 |
+| EARS C2 | 858 | 65 | 63 | 146 | 584 | 75.6 | 0.24 | 30.8 | 50.8 | 35 | 28 | 0.0 | 4 | 17 | 7 |
+| EARS C3 | 858 | 123 | 149 | 88 | 498 | 72.4 | 0.32 | 58.3 | 45.2 | 35 | 34 | 0.0 | 5 | 24 | 5 |
+| NB-GLM (Farrington-style) | 858 | 88 | 46 | 123 | 601 | 80.3 | 0.39 | 41.7 | 65.7 | 35 | 22 | 0.0 | 2 | 14 | 6 |
 
-NB-GLM pooled correlation of the weekly 0/1 series at lag L (L < 0: radar leads): L=-4: 0.06, L=-3: 0.17, L=-2: 0.22, L=-1: 0.34, L=0: 0.34, L=1: 0.33, L=2: 0.30, L=3: 0.25, L=4: 0.17. Peak at L = -1.
+NB-GLM pooled correlation of the weekly 0/1 series at lag L (L < 0: radar leads): L=-4: 0.03, L=-3: 0.14, L=-2: 0.21, L=-1: 0.34, L=0: 0.34, L=1: 0.33, L=2: 0.30, L=3: 0.25, L=4: 0.15. Peak at L = 0.
 
-Of the 111 district-weeks with >= 3 MOH areas flagged but no radar alert, 64% are labelled 'High burden, within expected range' on the dashboard (count in the district's own top 10% but within the expected range for the season). That is how the two signals are reconciled for the user.
+Of the 123 district-weeks with >= 3 MOH areas flagged but no radar alert, 59% are labelled 'High burden, within expected range' on the dashboard (count in the district's own top 10% but within the expected range for the season). That is how the two signals are reconciled for the user.
 
 ## g) 2026 separately (the proposal promised this)
 
 | method | alert rate / 100 (real 2026) | shown / 100 (2026, after gating) | sensitivity % (outbreaks starting 2026, n=552) | median delay (wk) |
 |---|---|---|---|---|
-| Status quo (2x last year) | 12.4 | 11.4 | 72.8 | 0.0 |
-| EARS C2 | 3.2 | 2.9 | 50.9 | 0.0 |
-| EARS C3 | 6.7 | 6.2 | 58.3 | 0.0 |
-| NB-GLM (Farrington-style) | 2.4 | 2.3 | 46.9 | 0.0 |
+| Status quo (2x last year) | 11.9 | 10.8 | 72.8 | 0.0 |
+| EARS C2 | 3.0 | 2.7 | 50.9 | 0.0 |
+| EARS C3 | 6.2 | 5.7 | 58.3 | 0.0 |
+| NB-GLM (Farrington-style) | 2.2 | 2.1 | 46.9 | 0.0 |
 
 2026 contains the year's dengue epidemic and the most source-table errors (four of the quarantined issues/columns), so its extraction-valid share is the lowest (see docs/EXTRACTION_REPORT.md). The 2026 dengue replay is in section d, the NDCU comparison in f.
 
@@ -454,7 +454,7 @@ Of the 111 district-weeks with >= 3 MOH areas flagged but no radar alert, 64% ar
 
 `data/clean/radar_signals.parquet` carries, per series-week and method: `weeks_persisted` (consecutive weeks up to and including this one above the bound; past weeks only), `sustained` (>= 2), `burden_pctl` (percentile of the count among the district's own past counts) and `burden_label` ('Unusual for this district and season', 'High burden, within expected range', or the held-back label for low completeness), plus the series-week `tier`, `held_back` and `tier_label` (section d2). `radar_track_record.parquet` has the per-series alert counts and the share followed by a second high week.
 
-NB-GLM: 1085 shown alerts; 25% sustained (>= 2 weeks); 25% followed by a second high week. Weeks persisted: {1: 809, 2: 148, 3: 67, 4: 34, 5: 11, 6: 4}.
+NB-GLM: 1088 shown alerts; 25% sustained (>= 2 weeks); 25% followed by a second high week. Weeks persisted: {1: 812, 2: 148, 3: 67, 4: 34, 5: 11, 6: 4}.
 
 ## Deviations from the proposal
 

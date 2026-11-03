@@ -157,6 +157,15 @@ wer_calendar:
         2026, previous 20-26 Jul (W30), next 3-9 Aug (W32), printed "(31st Week)", cum chains
         100%/100%, monotone 100%.
 
+# Data freeze for the submission: every reported number, the README, HEADLINES.md and the dashboard
+# banner use the data of this week. previous_week = the analysis cut-off before the freeze (the
+# extraction report lists the issues added since).
+data_freeze:
+  week: 2026-W36
+  issue: Vol 53 No 37
+  date: 2026-11-03
+  previous_week: 2026-W33
+
 # WER publication lag (src/radar_lk/ingest/publication_lag.py)
 publication_lag_weeks: 8   # median days from end of reporting week to PDF CreationDate = 53 over 242 issues
 

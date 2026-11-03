@@ -43,6 +43,13 @@ def radar_cfg() -> dict:
     return r
 
 
+def data_signature(panel: pd.DataFrame) -> tuple[int, int, int]:
+    """What the NB fits were made on: latest week index, observed rows, and their total count.
+    New weeks (or any changed count) invalidate the cached fits, so refit points are added."""
+    obs = panel["observed"].dropna()
+    return int(panel["t"].max()), int(len(obs)), int(obs.sum())
+
+
 def _fit_one(args):
     key, y, cfg = args
     return key, nb_fits(np.asarray(y, float), cfg)
@@ -241,8 +248,12 @@ def run(workers: int = 4, reuse_fits: bool = False) -> pd.DataFrame:
         with open(CACHE, "rb") as f:
             cached = pickle.load(f)
         keys = set(panel.groupby(["area", "disease"]).groups)
-        if cached["cfg"] != cfg or set(cached["fits"]) != keys:
-            print("cached NB fits do not match the current data/config; refitting")
+        if (
+            cached["cfg"] != cfg
+            or set(cached["fits"]) != keys
+            or cached.get("data") != data_signature(panel)
+        ):
+            print("cached NB fits do not match the current data/config (e.g. new weeks); refitting")
             cached = None
     if cached:
         fits = cached["fits"]
@@ -251,7 +262,7 @@ def run(workers: int = 4, reuse_fits: bool = False) -> pd.DataFrame:
         fits = fit_all(panel, cfg, workers)
         CACHE.parent.mkdir(parents=True, exist_ok=True)
         with open(CACHE, "wb") as f:
-            pickle.dump({"fits": fits, "cfg": cfg}, f)
+            pickle.dump({"fits": fits, "cfg": cfg, "data": data_signature(panel)}, f)
     # stop rule: NB-GLM must not flag more than max_alert_rate of district-weeks
     q = cfg["quantile"]
     steps = [x for x in QUANTILE_STEPS if x >= q]

@@ -48,6 +48,7 @@ tr = tr[(tr["disease"] == dis)].drop_duplicates("h").set_index("h")
 NAMES = {"persistence": "Persistence", "climatology": "Seasonal climatology",
          "glm": "NB GLM / logistic", "lightgbm": "LightGBM"}  # fmt: skip
 
+
 def _iv(r, k: str) -> str:
     """Expected count with the 80% range, plus the 90% range (tooltip only)."""
     return (

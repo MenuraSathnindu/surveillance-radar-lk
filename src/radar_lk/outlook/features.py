@@ -80,6 +80,25 @@ def week_label(weeks: pd.DataFrame, t) -> np.ndarray:
     ).reshape(t.shape)
 
 
+def check_weather(w: pd.DataFrame, areas, first_year: int, last: tuple, max_lag: int) -> None:
+    """Every RDHS must have weather for every week the backtest and the live forecast use up to
+    the latest reported week: from max_lag weeks before first_year-W01 to `last`. Otherwise stop
+    with the districts and weeks (a silently missing district would just become NaN rain)."""
+    from datetime import date, timedelta
+
+    from radar_lk.ingest.weather import WeatherCoverageError, coverage_problems, describe
+
+    d0 = date.fromisocalendar(first_year, 1, 1) - timedelta(weeks=max_lag)
+    first = tuple(d0.isocalendar()[:2])
+    problems = coverage_problems(w, areas, first, last)
+    if problems:
+        raise WeatherCoverageError(
+            f"[stop] outlook: weather missing for {len(problems)} RDHS between {first[0]}-W"
+            f"{first[1]:02d} and {last[0]}-W{last[1]:02d}: {describe(problems)}. Rerun "
+            "`python -m radar_lk.ingest.weather` (it fetches only what is missing)."
+        )
+
+
 def load_inputs(disease: str, cfg: dict) -> Inputs:
     from radar_lk.outlook import neighbours
 
@@ -113,6 +132,7 @@ def load_inputs(disease: str, cfg: dict) -> Inputs:
 
     w = pd.read_parquet(CLEAN_DIR / "weather.parquet")
     w = w[w["area"].isin(areas)]
+    check_weather(w, areas, cfg["first_year"], (ly, lw), max(cfg["rain_lags"]))
     return Inputs(
         disease=disease,
         areas=areas,

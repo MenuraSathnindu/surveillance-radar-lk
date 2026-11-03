@@ -1,6 +1,6 @@
 # WER Table 1 extraction report
 
-Generated 2026-11-03 07:28 UTC by `python -m radar_lk.ingest.parse_wer`.
+Generated 2026-11-03 08:36 UTC by `python -m radar_lk.ingest.parse_wer`.
 Primary data: Epidemiology Unit, Ministry of Health, Sri Lanka (Weekly Epidemiological Report, Table 1). Source files: `data/raw/wer/*.pdf`, listed with hashes in `data/raw/manifest.csv`. Every row in `data/clean/wer.parquet` carries `source_file`, `source_issue` and `extracted_at`.
 
 ## 1. Summary
@@ -11,6 +11,20 @@ Primary data: Epidemiology Unit, Ministry of Health, Sri Lanka (Weekly Epidemiol
 - National source errors (districts kept, national row queued): weekly **155**, cumulative **80**
 - Duplicate weeks resolved: **0**
 - Rows in review queue: **2,638** (district 2,314)
+
+## 1b. Data freeze: 2026-W36 (Vol 53 No 37), 2026-11-03
+
+Everything in the submission uses the data up to reporting week **2026-W36** (Vol 53 No 37), frozen on 2026-11-03. Issues added after the previous analysis cut-off (2026-W33):
+
+| issue | week | district rows valid | district rows queued | % extraction_valid | rules triggered | C** mean of districts | districts completeness_low | revised rows |
+|---|---|---|---|---|---|---|---|---|
+| Vol 53 No 35 | 2026-W34 | 364 | 0 | 100.0 | none | 56.4 | 20 | 0 |
+| Vol 53 No 36 | 2026-W35 | 364 | 0 | 100.0 | none | 95.2 | 5 | 0 |
+| Vol 53 No 37 | 2026-W36 | 364 | 0 | 100.0 | none | 95.3 | 4 | 0 |
+
+**Low reporting completeness checked on the page.** In 2026-W34 (Vol 53 No 35) many districts print a very low C** (e.g. Vol 53 No 35, 34th week: Kandy 7, Badulla 9, Nuwara Eliya 13, Gampaha 24, Sri Lanka 56). This is what the PDF prints, confirmed on the rendered Table 1 page, not a parser error. Alerts in those district-weeks are held back (shown greyed out, never hidden).
+
+Hand-check pack v4 (5 non-zero cells from these issues, `data/handcheck/v4/`) is generated for manual checking; score it with `python scripts/handcheck_score.py data/handcheck/v4/handcheck_verified.csv`.
 
 ## 2. Issues processed, per year
 
@@ -380,7 +394,7 @@ Footnote text under Table 1 in the parsed issues (digits and dates masked), most
 
 **Second extractor (PyMuPDF, `scripts/cross_extract.py`, details in `docs/CROSS_EXTRACT.md`):**
 
-- Cells compared: **177,876** from 241 issues
+- Cells compared: **180,306** from 244 issues
 - Agreement: **100.000%**; disagreements: **0** (all listed in `data/review_queue/cross_extract.csv`)
 - Of the agreeing cells, 6 are blank or unreadable in both extractors (e.g. a stray `v` where a digit should be); they stay in review.
 - Both libraries read the PDF's embedded text layer, so this rules out parser bugs (row, column and token handling) but not a text layer that differs from the printed page; the hand-check pack covers that.
@@ -404,8 +418,8 @@ Measured without network from the PDFs themselves: lag = PDF `CreationDate` minu
 | 2023 | 52.0 | 24.5 | 18.0 | 50.2 | 3.5 |
 | 2024 | 51.0 | 39.0 | 26.5 | 52.0 | 5.6 |
 | 2025 | 52.0 | 70.5 | 60.8 | 81.0 | 10.1 |
-| 2026 | 33.0 | 55.0 | 36.0 | 78.0 | 7.9 |
-| all | 239.0 | 53.0 | 30.0 | 75.5 | 7.6 |
+| 2026 | 36.0 | 56.0 | 38.2 | 74.2 | 8.0 |
+| all | 242.0 | 53.0 | 31.0 | 74.8 | 7.6 |
 
 **Upload date (corroboration; files named `en_<uniqid>_` only):**
 
@@ -415,8 +429,8 @@ Measured without network from the PDFs themselves: lag = PDF `CreationDate` minu
 | 2023 | 52.0 | 31.0 | 23.2 | 60.2 | 4.4 |
 | 2024 | 51.0 | 39.0 | 27.5 | 53.5 | 5.6 |
 | 2025 | 52.0 | 70.5 | 61.0 | 81.2 | 10.1 |
-| 2026 | 33.0 | 57.0 | 40.0 | 78.0 | 8.1 |
-| all | 197.0 | 54.0 | 32.0 | 75.0 | 7.7 |
+| 2026 | 36.0 | 57.0 | 43.0 | 76.5 | 8.1 |
+| all | 200.0 | 55.0 | 32.0 | 74.2 | 7.9 |
 
 The 2022 upload lag is long because 2022 issues were re-uploaded in a batch in 2023 (their file names carry 2023 stamps); their creation dates are the better measure. `publication_lag_weeks` in `config/sources.yaml` is the overall median creation lag in weeks (7.6, rounded). Practical meaning: a rise in week t is visible in the WER about two months later, so the radar is a retrospective early-warning check for the Regional Epidemiologist, not a real-time alarm, unless the same table is available to them earlier through EPINET.
 

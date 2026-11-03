@@ -416,17 +416,42 @@ def post(cfg: dict, raw: pd.DataFrame, lives: dict) -> None:
     report.write(cfg, fc_all, tr_all, lives)
 
 
-def main(reuse: bool = False) -> None:
+THREAD_VARS = ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS")
+
+
+def fit_all_diseases(cfg: dict, workers: int, run=None) -> list:
+    """run_one for every disease: in `workers` processes (BLAS/OpenMP capped at 2 threads each,
+    so two fits do not exhaust memory), and if a worker dies anyway (BrokenProcessPool, e.g. out
+    of memory) the diseases are redone one after another in this process."""
+    import os
+    from concurrent.futures import ProcessPoolExecutor
+    from concurrent.futures.process import BrokenProcessPool
+
+    run = run or run_one
+    diseases = cfg["diseases"]
+    if workers > 1:
+        for v in THREAD_VARS:  # inherited by the spawned workers
+            os.environ.setdefault(v, "2")
+        try:
+            with ProcessPoolExecutor(min(workers, len(diseases))) as ex:
+                return list(ex.map(run, diseases, [cfg] * len(diseases)))
+        except BrokenProcessPool as e:
+            print(
+                f"WARNING: an outlook worker died ({e}); probably out of memory. Rerunning the "
+                "diseases one after another (about twice as long).",
+                flush=True,
+            )
+    return [run(d, cfg) for d in diseases]
+
+
+def main(reuse: bool = False, workers: int = 2) -> None:
     cfg = features.outlook_cfg()
     if reuse and RAW.exists() and CACHE.exists():
         with open(CACHE, "rb") as f:
             lives = pickle.load(f)
         post(cfg, pd.read_parquet(RAW), lives)
         return
-    from concurrent.futures import ProcessPoolExecutor
-
-    with ProcessPoolExecutor(len(cfg["diseases"])) as ex:
-        res = list(ex.map(run_one, cfg["diseases"], [cfg] * len(cfg["diseases"])))
+    res = fit_all_diseases(cfg, workers)
     raw = pd.concat([fc for fc, _ in res], ignore_index=True)
     raw["area"] = raw["area"].astype(str)
     lives = {d: live for d, (_, live) in zip(cfg["diseases"], res, strict=True)}
@@ -442,4 +467,6 @@ if __name__ == "__main__":
 
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--reuse", action="store_true", help="reuse saved raw forecasts (no refit)")
-    main(ap.parse_args().reuse)
+    ap.add_argument("--workers", type=int, default=2, help="processes (1 = one disease at a time)")
+    a = ap.parse_args()
+    main(a.reuse, a.workers)

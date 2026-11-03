@@ -118,3 +118,22 @@ def test_conformal_quantile_is_the_finite_sample_one():
     s = np.arange(1, 11, dtype=float)  # n = 10
     assert conformal.conformal_q(s, 0.8) == 9.0  # ceil(11 * 0.8) = 9th smallest
     assert conformal.conformal_q(s, 0.95) == float("inf")  # ceil(11 * 0.95) = 11 > n
+
+
+def _die_in_worker(d, cfg):
+    """Dies abruptly (as when out of memory) in a worker process; works in the parent."""
+    import os
+
+    if os.getpid() != int(os.environ["OUTLOOK_TEST_PARENT"]):
+        os._exit(9)
+    return d, {"ran_in": "parent"}
+
+
+def test_dead_worker_falls_back_to_one_disease_at_a_time(monkeypatch, capsys):
+    import os
+
+    monkeypatch.setenv("OUTLOOK_TEST_PARENT", str(os.getpid()))
+    cfg = {"diseases": ["leptospirosis", "dengue"]}
+    out = ob.fit_all_diseases(cfg, workers=2, run=_die_in_worker)
+    assert out == [("leptospirosis", {"ran_in": "parent"}), ("dengue", {"ran_in": "parent"})]
+    assert "an outlook worker died" in capsys.readouterr().out

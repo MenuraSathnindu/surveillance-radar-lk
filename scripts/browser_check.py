@@ -77,7 +77,10 @@ def main() -> int:
                 got = title(page)
                 nf = "Page not found" in page.inner_text("body")
                 ok = got == want and not nf
-                print(f"/{slug}: title {got!r}{' + Page not found' if nf else ''}", "OK" if ok else "FAIL")
+                print(
+                    f"/{slug}: title {got!r}{' + Page not found' if nf else ''}",
+                    "OK" if ok else "FAIL",
+                )
                 ok or fails.append(f"/{slug}")
             page.goto(f"{base}/?week=2024-W51")
             ready(page)
@@ -96,6 +99,8 @@ def main() -> int:
 
             before = shown()
             polys = page.locator(".choroplethlayer path")
+            polys.first.wait_for(state="attached", timeout=60_000)  # plotly draws after load
+            time.sleep(1)
             n = polys.count()
             # polygons are drawn in the order of the (alphabetical) district list, Kalmunai excluded
             areas = sorted(
@@ -114,8 +119,10 @@ def main() -> int:
             ready(page)
             after = shown()
             ok = n == 25 and after == target and before != target
-            print(f"map click: {n} polygons; shown district {before!r} -> {after!r}",
-                  "OK" if ok else "FAIL")
+            print(
+                f"map click: {n} polygons; shown district {before!r} -> {after!r}",
+                "OK" if ok else "FAIL",
+            )
             ok or fails.append("map click")
             b.close()
     finally:

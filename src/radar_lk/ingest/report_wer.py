@@ -571,6 +571,74 @@ def cstar_section(results) -> list[str]:
     return out
 
 
+def freeze_section(clean: pd.DataFrame, review: pd.DataFrame) -> list[str]:
+    """The data freeze, and every issue added after the previous analysis cut-off."""
+    from radar_lk import load_config
+
+    fz = load_config().get("data_freeze")
+    if not fz:
+        return []
+    py, pw = (int(x) for x in str(fz["previous_week"]).split("-W"))
+    key = py * 100 + pw
+    c = clean[(clean["epi_year"] * 100 + clean["epi_week"]) > key]
+    r = review[(review["epi_year"] * 100 + review["epi_week"]) > key]
+    out = [
+        f"## 1b. Data freeze: {fz['week']} ({fz['issue']}), {fz['date']}",
+        "",
+        f"Everything in the submission uses the data up to reporting week **{fz['week']}** "
+        f"({fz['issue']}), frozen on {fz['date']}. Issues added after the previous analysis "
+        f"cut-off ({fz['previous_week']}):",
+        "",
+    ]
+    if c.empty and r.empty:
+        return out + ["None.", ""]
+    rows = []
+    for (iss, y, w), g in pd.concat([c, r]).groupby(["source_issue", "epi_year", "epi_week"]):
+        gc = g[g["validated"].astype(bool) & (g["area_level"] == "rdhs")]
+        gr = g[~g["validated"].astype(bool) & (g["area_level"] == "rdhs")]
+        dd = gc.drop_duplicates("area")
+        reasons = g.loc[~g["validated"].astype(bool), "fail_reason"].replace("", pd.NA).dropna()
+        notes = g["note"].replace("", pd.NA).dropna()
+        rows.append(
+            {
+                "issue": iss,
+                "week": f"{y}-W{w:02d}",
+                "district rows valid": len(gc),
+                "district rows queued": len(gr),
+                "% extraction_valid": _pct(len(gc), len(gc) + len(gr)),
+                "rules triggered": "; ".join(
+                    sorted(set(reasons.astype(str)) | set(notes.astype(str)))
+                )
+                or "none",
+                "C** mean of districts": float(dd["completeness_pct"].mean()),
+                "districts completeness_low": int(dd["completeness_low"].fillna(False).sum()),
+                "revised rows": int(gc["revised"].fillna(False).astype(bool).sum()),
+            }
+        )
+    t = pd.DataFrame(rows)
+    out += [md(t), ""]
+    low = t[t["districts completeness_low"] >= 10]
+    if len(low):
+        out += [
+            "**Low reporting completeness checked on the page.** In "
+            + ", ".join(f"{r.week} ({r.issue})" for r in low.itertuples())
+            + " many districts print a very low C** (e.g. Vol 53 No 35, 34th week: Kandy 7, "
+            "Badulla 9, Nuwara Eliya 13, Gampaha 24, Sri Lanka 56). This is what the PDF "
+            "prints, confirmed on the rendered Table 1 page, not a parser error. Alerts in "
+            "those district-weeks are held back (shown greyed out, never hidden).",
+            "",
+        ]
+    v4 = REPO_ROOT / "data" / "handcheck" / "v4"
+    if v4.exists():
+        out += [
+            "Hand-check pack v4 (5 non-zero cells from these issues, `data/handcheck/v4/`) is "
+            "generated for manual checking; score it with `python scripts/handcheck_score.py "
+            "data/handcheck/v4/handcheck_verified.csv`.",
+            "",
+        ]
+    return out
+
+
 def publication_lag_section() -> list[str]:
     """Days from the end of the printed reporting week to the PDF's creation (and upload)."""
     p = REPO_ROOT / "data" / "clean" / "publication_lag.parquet"
@@ -786,7 +854,8 @@ def write_report(
         "",
     ]
     body = (
-        issues_section(results, dropped_early)
+        freeze_section(clean, review)
+        + issues_section(results, dropped_early)
         + validation_section(raw, clean, review)
         + failures_section(clean, review)
         + source_error_section(errors)

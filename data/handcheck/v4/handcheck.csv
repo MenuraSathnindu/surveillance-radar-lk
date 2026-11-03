@@ -1,0 +1,6 @@
+no,issue,district,disease,column,extracted_value,image,verified,actual_value,notes
+1,Vol 53 No 35,Mannar,dengue,B,535,01.png,,,
+2,Vol 53 No 35,Batticaloa,dysentery,A,4,02.png,,,
+3,Vol 53 No 37,Galle,viral_hepatitis,A,2,03.png,,,
+4,Vol 53 No 37,Kalutara,leptospirosis,A,12,04.png,,,
+5,Vol 53 No 36,Polonnaruwa,leishmaniasis,A,3,05.png,,,

@@ -46,12 +46,18 @@ SC = RES / 72.0
 
 
 def sample(
-    df: pd.DataFrame, rng: random.Random, n: int = N, exclude: set[str] | None = None
+    df: pd.DataFrame,
+    rng: random.Random,
+    n: int = N,
+    exclude: set[str] | None = None,
+    max_per_issue: int = 1,
 ) -> pd.DataFrame:
-    per_year = {y: n // len(YEARS) + (1 if i < n % len(YEARS) else 0) for i, y in enumerate(YEARS)}
-    used_issues: set[str] = set(exclude or ())
+    years = [y for y in YEARS if (df["epi_year"] == y).any()]
+    per_year = {y: n // len(years) + (1 if i < n % len(years) else 0) for i, y in enumerate(years)}
+    excluded: set[str] = set(exclude or ())
+    per_issue: dict[str, int] = {}
     picks = []
-    for y in YEARS:
+    for y in years:
         d = df[df["epi_year"] == y]
         diseases = sorted(d["disease"].unique())
         rng.shuffle(diseases)
@@ -59,11 +65,14 @@ def sample(
         while sum(p["epi_year"] == y for p in picks) < per_year[y]:
             dis = diseases[k % len(diseases)]
             k += 1
-            cand = d[(d["disease"] == dis) & ~d["source_file"].isin(used_issues)]
+            full = {f for f, k in per_issue.items() if k >= max_per_issue}
+            cand = d[(d["disease"] == dis) & ~d["source_file"].isin(excluded | full)]
             if cand.empty:
+                if k > 50 * len(diseases):
+                    raise SystemExit(f"not enough issues in {y} for {per_year[y]} cells")
                 continue
             row = cand.iloc[rng.randrange(len(cand))]
-            used_issues.add(row["source_file"])
+            per_issue[row["source_file"]] = per_issue.get(row["source_file"], 0) + 1
             col = "A" if rng.random() < 0.5 else "B"
             picks.append(
                 {
@@ -161,6 +170,9 @@ def main() -> None:
         default=[],
         help="earlier packs (folders) whose issues are not reused",
     )
+    ap.add_argument("--from-week", default=None, help="only issues reporting this week or later")
+    ap.add_argument("--max-per-issue", type=int, default=1, help="cells allowed per issue")
+    ap.add_argument("--nonzero", action="store_true", help="only cells whose value is not 0")
     a = ap.parse_args()
     out_dir = OUT.parent / a.version
     if out_dir.exists():
@@ -169,6 +181,11 @@ def main() -> None:
         )
     clean = pd.read_parquet(CLEAN_DIR / "wer.parquet")
     df = clean[(clean["area_level"] == "rdhs") & clean["validated"]]
+    if a.from_week:
+        y, w = (int(x) for x in a.from_week.split("-W"))
+        df = df[df["epi_year"] * 100 + df["epi_week"] >= y * 100 + w]
+    if a.nonzero:  # a zero is easy to read right; non-zero cells test digits and alignment
+        df = df[(df["cases"] > 0) & (df["cum_cases"] > 0)]
     cfg = load_config()
     exclude: set[str] = set()
     for prev in a.exclude:
@@ -179,7 +196,7 @@ def main() -> None:
     # draw until every sampled cell can be located one-to-one (rows with a blank cell are skipped)
     cells = None
     for _ in range(20):
-        cand = sample(df, rng, a.n, exclude)
+        cand = sample(df, rng, a.n, exclude, a.max_per_issue)
         ok = True
         located = {}
         for _, c in cand.iterrows():
