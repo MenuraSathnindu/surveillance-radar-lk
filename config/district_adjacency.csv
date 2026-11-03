@@ -1,0 +1,121 @@
+area,neighbour,basis
+Ampara,Badulla,polygon
+Ampara,Batticaloa,polygon
+Ampara,Hambantota,polygon
+Ampara,Kalmunai,rule: Kalmunai RDHS
+Ampara,Matale,polygon
+Ampara,Monaragala,polygon
+Ampara,Polonnaruwa,polygon
+Anuradhapura,Kurunegala,polygon
+Anuradhapura,Mannar,polygon
+Anuradhapura,Matale,polygon
+Anuradhapura,Mullaitivu,polygon
+Anuradhapura,Polonnaruwa,polygon
+Anuradhapura,Puttalam,polygon
+Anuradhapura,Trincomalee,polygon
+Anuradhapura,Vavuniya,polygon
+Badulla,Ampara,polygon
+Badulla,Kandy,polygon
+Badulla,Matale,polygon
+Badulla,Monaragala,polygon
+Badulla,Nuwara Eliya,polygon
+Badulla,Ratnapura,polygon
+Batticaloa,Ampara,polygon
+Batticaloa,Kalmunai,rule: Kalmunai RDHS
+Batticaloa,Polonnaruwa,polygon
+Batticaloa,Trincomalee,polygon
+Colombo,Gampaha,polygon
+Colombo,Kalutara,polygon
+Colombo,Kegalle,polygon
+Colombo,Ratnapura,polygon
+Galle,Kalutara,polygon
+Galle,Matara,polygon
+Galle,Ratnapura,polygon
+Gampaha,Colombo,polygon
+Gampaha,Kegalle,polygon
+Gampaha,Kurunegala,polygon
+Gampaha,Puttalam,polygon
+Hambantota,Ampara,polygon
+Hambantota,Matara,polygon
+Hambantota,Monaragala,polygon
+Hambantota,Ratnapura,polygon
+Jaffna,Kilinochchi,polygon
+Jaffna,Mullaitivu,polygon
+Kalmunai,Ampara,rule: Kalmunai RDHS
+Kalmunai,Batticaloa,rule: Kalmunai RDHS
+Kalutara,Colombo,polygon
+Kalutara,Galle,polygon
+Kalutara,Ratnapura,polygon
+Kandy,Badulla,polygon
+Kandy,Kegalle,polygon
+Kandy,Kurunegala,polygon
+Kandy,Matale,polygon
+Kandy,Nuwara Eliya,polygon
+Kegalle,Colombo,polygon
+Kegalle,Gampaha,polygon
+Kegalle,Kandy,polygon
+Kegalle,Kurunegala,polygon
+Kegalle,Nuwara Eliya,polygon
+Kegalle,Ratnapura,polygon
+Kilinochchi,Jaffna,polygon
+Kilinochchi,Mannar,polygon
+Kilinochchi,Mullaitivu,polygon
+Kurunegala,Anuradhapura,polygon
+Kurunegala,Gampaha,polygon
+Kurunegala,Kandy,polygon
+Kurunegala,Kegalle,polygon
+Kurunegala,Matale,polygon
+Kurunegala,Puttalam,polygon
+Mannar,Anuradhapura,polygon
+Mannar,Kilinochchi,polygon
+Mannar,Mullaitivu,polygon
+Mannar,Puttalam,polygon
+Mannar,Vavuniya,polygon
+Matale,Ampara,polygon
+Matale,Anuradhapura,polygon
+Matale,Badulla,polygon
+Matale,Kandy,polygon
+Matale,Kurunegala,polygon
+Matale,Polonnaruwa,polygon
+Matara,Galle,polygon
+Matara,Hambantota,polygon
+Matara,Ratnapura,polygon
+Monaragala,Ampara,polygon
+Monaragala,Badulla,polygon
+Monaragala,Hambantota,polygon
+Monaragala,Ratnapura,polygon
+Mullaitivu,Anuradhapura,polygon
+Mullaitivu,Jaffna,polygon
+Mullaitivu,Kilinochchi,polygon
+Mullaitivu,Mannar,polygon
+Mullaitivu,Trincomalee,polygon
+Mullaitivu,Vavuniya,polygon
+Nuwara Eliya,Badulla,polygon
+Nuwara Eliya,Kandy,polygon
+Nuwara Eliya,Kegalle,polygon
+Nuwara Eliya,Ratnapura,polygon
+Polonnaruwa,Ampara,polygon
+Polonnaruwa,Anuradhapura,polygon
+Polonnaruwa,Batticaloa,polygon
+Polonnaruwa,Matale,polygon
+Polonnaruwa,Trincomalee,polygon
+Puttalam,Anuradhapura,polygon
+Puttalam,Gampaha,polygon
+Puttalam,Kurunegala,polygon
+Puttalam,Mannar,polygon
+Ratnapura,Badulla,polygon
+Ratnapura,Colombo,polygon
+Ratnapura,Galle,polygon
+Ratnapura,Hambantota,polygon
+Ratnapura,Kalutara,polygon
+Ratnapura,Kegalle,polygon
+Ratnapura,Matara,polygon
+Ratnapura,Monaragala,polygon
+Ratnapura,Nuwara Eliya,polygon
+Trincomalee,Anuradhapura,polygon
+Trincomalee,Batticaloa,polygon
+Trincomalee,Mullaitivu,polygon
+Trincomalee,Polonnaruwa,polygon
+Vavuniya,Anuradhapura,polygon
+Vavuniya,Mannar,polygon
+Vavuniya,Mullaitivu,polygon

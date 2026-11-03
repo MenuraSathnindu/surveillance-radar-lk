@@ -17,7 +17,7 @@ If the site goes down again: drop PDFs into `data/raw/wer/` and run
 |---|---|---|
 | WER 2016–2026 | **WER 2022–2026 first** (≈240 issues) | Extend back to 2016 |
 | CHIRPS + ERA5 per MOH | **Open-Meteo daily at 26 district-capital points** (`data/clean/weather.parquet`, done) | CHIRPS per MOH polygon |
-| Dengue MOH high-risk outlook | **NO-GO (2 Nov): NDCU archive has only 2026 W1-43.** District-level **leptospirosis outlook** from WER + weather | Dengue MOH outlook if older NDCU lists are found (see `docs/NDCU_FEASIBILITY.md`) |
+| Dengue MOH high-risk outlook | **NO-GO (2 Nov): NDCU archive has only 2026 W1-43.** One disease-agnostic **district-level outlook** (leptospirosis primary, dengue secondary) from WER + weather that fills the publication gap: from the latest reported week t it forecasts t+1 .. t+L+2 (L = 8-week publication lag) | Dengue MOH outlook if older NDCU lists are found (see `docs/NDCU_FEASIBILITY.md`) |
 | Farrington via R + EARS + NB-GLM | **EARS C1/C2/C3 + NB-GLM (pure Python)** | Farrington Flexible via rpy2 |
 | Brief by email | **Downloadable brief (PDF/Markdown)** | Email |
 | LLM phrasing | **Template only** | Optional LLM phrasing |
@@ -52,8 +52,18 @@ If the site goes down again: drop PDFs into `data/raw/wer/` and run
   measured (median 8 weeks); evaluation against proposal section 9: null false-alert rate, matched
   comparison, known-event replay (2024 leptospirosis, 2026 dengue, Cyclone Ditwah), gating
   evaluation, persistence and burden fields, 2026 reported separately, deviations documented
-- [ ] Tue 3/Wed 4 — fill v3 and score v2+v3 together (50 cells); leptospirosis outlook (district
-  level, WER + weather lags) + rolling-origin backtest
+- [x] Tue 3 — hand-check v3 filled and scored with v2: **50/50** (95% CI 92.9-100%)
+- [x] Tue 3 — radar follow-ups: two-tier radar (NB-GLM alert + EARS C2 early warning) evaluated and
+  **adopted** (union 3.8 false alerts / 100, median replay gain 0); event replay with every
+  qualifying district (67 district-events); held-back alerts shown greyed out with the shared
+  label from config; wer.parquet rewrite checked (only `extracted_at` changed);
+  `docs/HEADLINES.md` created as the single source for quoted numbers
+- [x] Tue 3/Wed 4 — outlook: disease-agnostic engine (`src/radar_lk/outlook/`), leptospirosis +
+  dengue, horizons 1..L+2, persistence / climatology / NB GLM-logistic / LightGBM, rolling-origin
+  backtest from 2024-W01 (refit every 4 weeks), split-conformal intervals, Venn-Abers
+  probabilities, SHAP, rainfall-lag figure, dengue vs NDCU check (`docs/OUTLOOK_BACKTEST.md`,
+  `data/clean/outlook_forecasts.parquet`, `outlook_track_record.parquet`)
 - [ ] Wed 4 — dashboard (This week, Map, Outlook, Track record) + weekly brief template; show
-  `burden_label`, `weeks_persisted`, suppression reasons, track record
-- [ ] Thu 5 — report, two-page summary, video, submit by 23:59
+  `tier_label` / `burden_label` (held-back greyed out), `weeks_persisted`, track record, the
+  outlook's dashboard model per horizon (stop rule) with intervals and Venn-Abers ranges
+- [ ] Thu 5 — report, two-page summary, video (numbers from `docs/HEADLINES.md`), submit by 23:59

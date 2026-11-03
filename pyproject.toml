@@ -20,6 +20,7 @@ dependencies = [
     "scikit-learn>=1.4",
     "lightgbm>=4.3",
     "mapie>=0.8",
+    "venn-abers>=1.4",
     "geopandas>=0.14",
     "plotly>=5.20",
     "streamlit>=1.33",

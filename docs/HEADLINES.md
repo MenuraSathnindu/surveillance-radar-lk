@@ -79,6 +79,23 @@ means ≥ 3 of the district's MOH areas are on the list; NB-GLM; 780 district-we
 | NDCU onsets caught within ±4 weeks | **22 of 35**; median lag **0 weeks** | When the radar catches an NDCU onset, it does so in the same week. | `docs/RADAR_BACKTEST.md` §f |
 | NDCU-only weeks explained | **64%** of the 111 are labelled "High burden, within expected range" | The dashboard reconciles the two: high for the district, but normal for the season. | `docs/RADAR_BACKTEST.md` §f |
 
-## 7. Outlook
+## 7. Outlook (district level: leptospirosis primary, dengue secondary)
 
-_To be filled next session (leptospirosis / dengue outlook backtest)._
+Rolling-origin backtest over 137 test origins (2024-W01 to 2026-W32) × 26 districts, refitted
+every 4 weeks, past-only. The origin t is the latest reported week. With the publication lag
+L = 8 weeks, h = 9 is "this week" and h = 10 is "next week" at the time of use; h = 1, 2 are the
+proposal's horizons. "Elevated" means the count is at or above the district's own 80th percentile
+of the 104 weeks before t. BSS = Brier skill score; MASE = MAE divided by persistence's MAE.
+
+| number | value | meaning | source |
+|---|---|---|---|
+| Leptospirosis: LightGBM vs persistence | beats it on **both** targets at **all 10** horizons | Under the stop rule, the dashboard uses LightGBM at every horizon. | `docs/OUTLOOK_BACKTEST.md` Leptospirosis, "Stop rule" |
+| Leptospirosis, h=1 / 2 | LightGBM BSS **0.35 / 0.35**, MASE **0.94 / 0.92**; AUROC **0.75 / 0.73** | For the weeks already over but not yet reported, the probability is about a third better than "same as the last report", and counts are 6–8% closer. | same, "Headline" and "Elevated, every horizon" |
+| Leptospirosis, this week / next week (h=9 / 10) | LightGBM BSS **0.47 / 0.47**, MASE **0.75 / 0.73** | At the time of use, the outlook halves persistence's probability error and cuts its count error by a quarter. Most of that skill is seasonal: BSS against seasonal climatology is only **0.05** at h=9 and h=10. | same |
+| Leptospirosis, 90% interval coverage | **91–94%** at every headline horizon (80%: **81–84%**) | Split-conformal count intervals hold their stated coverage. Mean width of the 90% interval: **15–18 cases**. | same, "Counts, every horizon" |
+| Leptospirosis, best model | NB GLM / logistic is slightly ahead of LightGBM at every headline horizon (h=1 BSS **0.38** vs 0.35) | The simple, interpretable model is at least as good. | same, "Headline" |
+| Rainfall lag | leptospirosis risk rises **about 6 weeks** after a very wet week in the model; in the raw data the excess peaks at **4 weeks** (**1.8×** the share elevated) | Rain at lags 3–7 weeks pushes P(elevated) up. This is an association, not proof of cause. | same, "Rainfall lag"; `docs/figures/outlook_leptospirosis_rain_lag.png` |
+| Top leptospirosis drivers (LightGBM, P(elevated)) | the district's own threshold, humidity (lags 2–4), district, temperature, season, rain at lags 4–6 | Weather relative to the target week matters, alongside place and season. | same, "What drives LightGBM" |
+| Dengue: stop rule | LightGBM loses to persistence on **counts at h=1–5** (MASE **1.71** at h=1), so the dashboard shows **persistence** counts there. It beats persistence on the **elevated** probability at every horizon. | During dengue's 2026 epidemic the last report is the best count guide for the next weeks. | `docs/OUTLOOK_BACKTEST.md` Dengue, "Stop rule" |
+| Dengue 2026, 90% coverage | only **65–76%** for LightGBM / GLM in 2026 (all years **89–91%**) | The epidemic year broke the past-only calibration: intervals were too narrow. | same, "2026 separately" |
+| Dengue vs NDCU (h=1, ≥ 3 MOH areas) | agreement **80.3%**, κ **0.50**; **66%** of NDCU-flagged district-weeks were forecast elevated, and **60%** of forecasts were NDCU-flagged | The short-horizon dengue outlook agrees with NDCU's lists about as well as the observed elevated flag does (κ 0.29). Agreement falls at h=9 / 10 (κ **0.35 / 0.30**). | same, "Dengue: 2026 forecasts vs NDCU" |

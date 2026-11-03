@@ -14,9 +14,18 @@ only as static PDFs, so abnormal local rises are noticed late.
 1. **Radar** — for each of 26 RDHS units × 14 notifiable diseases (Epidemiology Unit WER Table 1),
    flag weeks that are abnormal for that place and season. Suppress alerts when that unit's
    reporting completeness is too low, and say why.
-2. **Dengue outlook** — probability that each MOH area appears on the NDCU high-risk list in
-   1 and 2 weeks, with conformal uncertainty ranges. Fallback (decided by 27 Oct, see PLAN):
-   district-level leptospirosis outlook from WER + rainfall.
+2. **Outlook (district level; the proposal's fallback)** — the NDCU MOH-level dengue outlook is
+   NO-GO (only 43 weeks of NDCU lists, see `docs/NDCU_FEASIBILITY.md`). Instead, one
+   disease-agnostic engine (`src/radar_lk/outlook/`) forecasts, for each of the 26 RDHS units,
+   the weekly count and P(elevated) (count ≥ the district's own past-only 80th percentile).
+   **Leptospirosis is primary, dengue secondary.** It fills the publication gap: the WER reports a
+   week about L = `publication_lag_weeks` (8) weeks late, but rainfall is near real time, so from
+   the latest reported week t it forecasts t+1 … t+L+2 (h = L+1 is "this week" and L+2 "next week"
+   at the time of use; h = 1, 2 are the proposal's horizons). Weather features sit at lag ≥ 2 weeks
+   before the target week (enforced in code). Models: persistence, seasonal climatology, NB GLM /
+   logistic, LightGBM. Uncertainty: split-conformal count intervals and Venn-Abers probability
+   ranges. Stop rule: at any horizon where LightGBM doesn't beat persistence, the dashboard shows
+   the best baseline there. Results are in `docs/OUTLOOK_BACKTEST.md`.
 
 Delivered as a Streamlit dashboard + a one-page weekly brief per RDHS.
 
@@ -70,7 +79,8 @@ src/radar_lk/ingest/         download.py, parse_wer.py, parse_ndcu.py, validate.
 src/radar_lk/harmonise/      epiweek.py (canonical week), names.py (district/MOH crosswalk)
 src/radar_lk/store.py        tidy schema, Parquet/DuckDB IO
 src/radar_lk/radar/          baselines (EARS, NB-GLM, Farrington via R), gating, backtest
-src/radar_lk/outlook/        features, models (persistence, logistic, LightGBM), conformal, backtest
+src/radar_lk/outlook/        features (lag>=2 weather), models (persistence, climatology, GLM, LightGBM),
+                             conformal (+Venn-Abers), neighbours (HDX adjacency), backtest, report
 src/radar_lk/brief/          weekly brief generation (template first)
 app/streamlit_app.py         dashboard
 data/raw/                    original PDFs (gitignored), data/raw/manifest.csv (committed)
@@ -99,6 +109,8 @@ pip install -e ".[dev]"            # install
 pytest -q                          # tests (run before every commit)
 python -m radar_lk.ingest.download --source wer --years 2022-2026
 python -m radar_lk.ingest.download --source ndcu_weekly
+python -m radar_lk.radar.run --reuse-fits && python -m radar_lk.radar.backtest --reuse
+python -m radar_lk.outlook.backtest            # ~12 min; --reuse rebuilds the report only
 streamlit run app/streamlit_app.py
 ```
 

@@ -160,6 +160,41 @@ wer_calendar:
 # WER publication lag (src/radar_lk/ingest/publication_lag.py)
 publication_lag_weeks: 8   # median days from end of reporting week to PDF CreationDate = 53 over 239 issues
 
+# Outlook (src/radar_lk/outlook): district-level forecasts that fill the publication gap. The WER
+# reports week t about `publication_lag_weeks` (L) weeks later, but rainfall is observed in near
+# real time, so from the latest reported week t the engine forecasts t+1 .. t+L+2 ("this week" =
+# t+L+1 and "next week" = t+L+2 at the time of use). Hyperparameters are fixed, never tuned on test
+# data.
+outlook:
+  diseases: [leptospirosis, dengue]   # primary first; the engine is disease-agnostic
+  first_year: 2022
+  warmup_from: [2023, 1]      # origins 2023 produce out-of-sample forecasts for calibration only
+  eval_from: [2024, 1]        # test origins from here to the latest week
+  refit_every: 4              # weeks
+  min_train_origin_weeks: 26  # a training origin needs this many past weeks (elevated threshold)
+  elevated_quantile: 0.80     # elevated = count >= the district's 80th pct of the 104 weeks before t
+  elevated_window: 104
+  elevated_min_floor: 1       # threshold never below 1 case (a district with mostly zeros)
+  rain_lags: [2, 3, 4, 5, 6, 7, 8]   # weeks before the TARGET week; all must be >= 2
+  rain_sum_lags: [2, 3, 4, 5]        # 4-week rain sum ending at lag 2
+  temp_rh_lags: [2, 3, 4]
+  fourier_k: 2
+  calib_origins: 52           # rolling calibration pool (origins) for conformal and Venn-Abers
+  calib_min: 100              # fewer residuals than this -> no interval
+  conformal_levels: [0.8, 0.9]
+  logistic_c: 1.0
+  lightgbm:
+    n_estimators: 300
+    learning_rate: 0.03
+    num_leaves: 15
+    min_child_samples: 40
+    subsample: 0.8
+    subsample_freq: 1
+    colsample_bytree: 0.8
+    reg_lambda: 1.0
+    random_state: 20261104
+    verbose: -1
+
 thresholds:
   completeness_min_pct: null    # not used: C** is undefined, gating is relative (completeness_low)
   radar_alert_quantile: 0.98    # NB-GLM upper bound; tightened by the backtest if the stop rule fires
