@@ -1,0 +1,11 @@
+no,issue,district,disease,column,extracted_value,image,verified,actual_value,notes
+1,Vol 53 No 19,Monaragala,dysentery,A,1,01.png,Y,,
+2,Vol 52 No 50,Nuwara Eliya,enteric_fever,B,7,02.png,Y,,
+3,Vol 50 No 30,Batticaloa,leptospirosis,B,69,03.png,Y,,
+4,Vol 53 No 33,Ratnapura,food_poisoning,A,0,04.png,Y,,
+5,Vol 50 No 38,Mullaitivu,dysentery,A,0,05.png,Y,,
+6,Vol 51 No 22,Matale,tuberculosis,A,3,06.png,Y,,
+7,Vol 52 No 27,Kegalle,leishmaniasis,A,1,07.png,Y,,
+8,Vol 49 No 31,Matale,chickenpox,A,2,08.png,Y,,
+9,Vol 49 No 47,Trincomalee,meningitis,B,10,09.png,Y,,
+10,Vol 51 No 23,Badulla,dengue,A,7,10.png,Y,,
