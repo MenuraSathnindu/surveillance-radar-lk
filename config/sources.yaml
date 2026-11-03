@@ -165,6 +165,20 @@ thresholds:
   radar_alert_quantile: 0.98    # NB-GLM upper bound; tightened by the backtest if the stop rule fires
   max_alert_rate: 0.10          # stop rule: >10% of district-weeks flagged
 
+# Radar display: the dashboard and the brief share these (src/radar_lk/radar/labels.py). Kept
+# outside `radar:` so that changing wording does not invalidate the cached NB fits.
+radar_display:
+  # Two-tier radar (alert = NB-GLM, early_warning = EARS C2 without NB-GLM). Written by
+  # `python -m radar_lk.radar.backtest`: adopted if the union's null false alerts <= 5 per 100
+  # district-weeks AND its median event-replay gain vs the status-quo rule >= 0.
+  tiers_adopted: true   # union null false alerts 3.8/100 (<= 5: yes); union median replay gain +0 wk (>= 0: yes)
+  labels:
+    alert: "Unusual for this district and season"
+    early_warning: "Early warning: above the last few weeks, not yet beyond the seasonal range"
+    high_burden: "High burden, within expected range"
+    # held-back alerts are SHOWN, greyed out, never hidden; {completeness_pct} = that week's C**
+    held_back: "Possible rise, held back: reporting completeness low ({completeness_pct:.0f}%). Late reports usually add cases, so the true rise may be larger."
+
 # Radar (src/radar_lk/radar). Every method uses only weeks before t (no lookahead).
 radar:
   first_year: 2022              # post-COVID baseline: 2022-W01 onwards

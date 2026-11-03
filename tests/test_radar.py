@@ -215,3 +215,109 @@ def test_burden_percentile_uses_past_weeks_only():
     assert b[30] == 100.0  # 100 is above all 30 past weeks
     assert b[31] == 0.0  # 0 is below all 31 past weeks (the 100 does not change that)
     assert b[26] == pytest.approx(100 * 26 / 26)  # 27 > the 26 past values 1..26
+
+
+# ------------------------------------------------------------------ tiers and labels
+
+LABELS = {
+    "alert": "A",
+    "early_warning": "EW",
+    "high_burden": "HB",
+    "held_back": "Possible rise, held back: reporting completeness low ({completeness_pct:.0f}%). "
+    "Late reports usually add cases, so the true rise may be larger.",
+}
+
+
+def test_tier_alerts_split_nb_and_c2_into_disjoint_tiers():
+    from radar_lk.radar.nullsim import tier_alerts
+
+    st = {
+        "y": np.array([10.0, 10, 10, 10, 1]),
+        "nb_u": np.array([0.99, 0.99, 0.5, 0.5, 0.999]),
+        "c2": np.array([5.0, 0.0, 5.0, 0.0, 5.0]),
+        "c3": np.zeros(5),
+        "prev": np.ones(5),
+    }
+    t = tier_alerts(st, min_count=3)
+    assert t["tier_alert"].tolist() == [True, True, False, False, False]  # last: below min_count
+    assert t["tier_early_warning"].tolist() == [False, False, True, False, False]
+    assert (t["tier_union"] == (t["tier_alert"] | t["tier_early_warning"])).all()
+    assert not (t["tier_alert"] & t["tier_early_warning"]).any()
+
+
+def test_detect_tiers_reports_the_tier_of_the_first_signal():
+    import pandas as pd
+
+    from radar_lk.radar.evaluation import detect_tiers
+
+    inj = pd.DataFrame(
+        {
+            "k": [2, 2, 3],
+            "start_year": 2025,
+            "y": [[10.0, 10.0], [10.0, 10.0], [10.0, 10.0]],
+            "nb_u": [[0.5, 0.99], [0.99, 0.5], [0.5, 0.5]],
+            "c2": [[5.0, 0.0], [5.0, 5.0], [0.0, 0.0]],
+            "c3": [[0.0, 0.0]] * 3,
+            "prev": [[1.0, 1.0]] * 3,
+        }
+    )
+    d = detect_tiers(inj, 3)
+    assert d["first_tier"].tolist() == ["early_warning", "alert", ""]  # NB wins a same-week tie
+    assert d["tier_union"].tolist() == [True, True, False]
+    assert d["union_delay"].iloc[0] == 0 and np.isnan(d["union_delay"].iloc[2])
+
+
+def test_add_tiers_and_held_back_label():
+    import pandas as pd
+
+    from radar_lk.radar.run import add_tiers
+
+    rows = []
+    # t=0: NB alert; t=1: C2 only; t=2: C2 only, low completeness; t=3: nothing, high burden
+    for t, nb, c2, low, pct, bp in [
+        (0, True, True, False, 90.0, 50),
+        (1, False, True, False, 90.0, 50),
+        (2, False, True, True, 41.6, 50),
+        (3, False, False, False, 90.0, 95),
+    ]:
+        for m, a in (("nb_glm", nb), ("ears_c2", c2), ("status_quo", True)):
+            rows.append(
+                {
+                    "area": "A",
+                    "disease": "d",
+                    "t": t,
+                    "method": m,
+                    "alert": a,
+                    "completeness_low": low,
+                    "completeness_pct": pct,
+                    "burden_pctl": bp,
+                }
+            )
+    s = pd.DataFrame(rows)
+    on = add_tiers(s, adopted=True, labels=LABELS).drop_duplicates("t").set_index("t")
+    assert on["tier"].tolist() == ["alert", "early_warning", "early_warning", ""]
+    assert on["held_back"].tolist() == [False, False, True, False]
+    assert on.loc[2, "tier_label"] == (
+        "Possible rise, held back: reporting completeness low (42%). "
+        "Late reports usually add cases, so the true rise may be larger."
+    )
+    assert on.loc[3, "tier_label"] == "HB"
+    off = add_tiers(s, adopted=False, labels=LABELS).drop_duplicates("t").set_index("t")
+    assert off["tier"].tolist() == ["alert", "", "", ""]  # NB-GLM only when not adopted
+    # the status-quo alert never creates a tier
+    assert len(add_tiers(s, adopted=True, labels=LABELS)) == len(s)
+
+
+def test_held_back_label_comes_from_config_and_tier_decision_is_written(tmp_path, monkeypatch):
+    from radar_lk.radar import labels as lb
+
+    text = lb.labels()["held_back"]
+    assert "{completeness_pct" in text and "never" not in text
+    assert lb.held_back(55.4).startswith(
+        "Possible rise, held back: reporting completeness low (55%)."
+    )
+    cfg = tmp_path / "sources.yaml"
+    cfg.write_text("radar_display:\n  tiers_adopted: null\n  labels: {}\n", encoding="utf-8")
+    monkeypatch.setattr(lb, "CONFIG_PATH", cfg)
+    lb.write_tiers_adopted(True, "union 4.1/100")
+    assert "  tiers_adopted: true   # union 4.1/100" in cfg.read_text(encoding="utf-8")

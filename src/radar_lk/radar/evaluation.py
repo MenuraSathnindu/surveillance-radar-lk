@@ -5,6 +5,7 @@
 * sweep / matched    sensitivity vs null false-alert rate; sensitivity at 1 and 2 false alerts / 100
 * define_events      known events, located in OUR data (case counts vs reference years; rainfall)
 * replay             first alert week per method and district against the status-quo rule
+* detect_tiers       the two-tier radar (NB-GLM alert / EARS C2 early warning) on injected outbreaks
 * gating_eval        do completeness-suppressed alerts look more like artefacts than kept ones?
 """
 
@@ -23,16 +24,19 @@ from radar_lk.radar.nullsim import (
     R_DEFAULT,
     alerts,
     simulate_series,
+    tier_alerts,
 )
 
 METHODS = ["status_quo", "ears_c2", "ears_c3", "nb_glm"]
+REPLAY_METHODS = METHODS + ["tiered"]  # tiered = first week either NB-GLM or EARS C2 alerted
 
 # ------------------------------------------------------------------ null simulation
 
 
 def null_false_alerts(panel, fits_all, cfg, R=R_DEFAULT, seed=20261106) -> pd.DataFrame:
     """Alerts per 100 district-weeks on outbreak-free simulated years, per method x threshold x
-    disease (and 'all').
+    disease (and 'all'), plus the two tiers and their union at the default thresholds
+    (method = tier_alert / tier_early_warning / tier_union, threshold 0).
     Returns a long table: method, threshold, disease, weeks, alerts, fa_per_100."""
     rng = np.random.default_rng(seed)
     rows = []
@@ -57,6 +61,17 @@ def null_false_alerts(panel, fits_all, cfg, R=R_DEFAULT, seed=20261106) -> pd.Da
                         "alerts": int(alerts(st, m, th, mc).sum()),
                     }
                 )
+        for m, a_ in tier_alerts(st, mc).items():
+            rows.append(
+                {
+                    "area": a,
+                    "disease": d,
+                    "method": m,
+                    "threshold": 0.0,
+                    "weeks": n,
+                    "alerts": int(a_.sum()),
+                }
+            )
     df = pd.DataFrame(rows)
     by = df.groupby(["method", "threshold", "disease"])[["weeks", "alerts"]].sum().reset_index()
     tot = df.groupby(["method", "threshold"])[["weeks", "alerts"]].sum().reset_index()
@@ -184,6 +199,31 @@ def detect(inj: pd.DataFrame, method: str, threshold: float, min_count: int, gat
     return det, delay
 
 
+def detect_tiers(inj: pd.DataFrame, min_count: int) -> pd.DataFrame:
+    """Per injected outbreak, at the default thresholds: detected by each tier and by the union,
+    the union's delay, and which tier gave the first signal (NB-GLM wins a tie)."""
+    rows = []
+    for _, r in inj.iterrows():
+        st = _window(r)
+        ta = tier_alerts(st, min_count)
+        nb = ta["tier_alert"] & ~np.isnan(st["nb_u"])
+        ew = ta["tier_early_warning"] & ~np.isnan(st["y"])
+        un = nb | ew
+        hit = np.flatnonzero(un)
+        rows.append(
+            {
+                "k": r["k"],
+                "start_year": r["start_year"],
+                "tier_alert": bool(nb.any()),
+                "tier_early_warning": bool(ew.any()),
+                "tier_union": bool(un.any()),
+                "union_delay": float(hit[0]) if len(hit) else np.nan,
+                "first_tier": ("alert" if nb[hit[0]] else "early_warning") if len(hit) else "",
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def sweep(inj: pd.DataFrame, null: pd.DataFrame, min_count: int) -> pd.DataFrame:
     rows = []
     for m in METHODS:
@@ -309,8 +349,9 @@ def _excess(c, disease, year, refs, weeks, ratio, min_excess) -> pd.DataFrame:
     )
 
 
-def define_events(clean: pd.DataFrame, weather: pd.DataFrame, max_districts: int = 8) -> list[dict]:
-    """Locate each named event in our own data, with the rule used, instead of assuming it."""
+def define_events(clean: pd.DataFrame, weather: pd.DataFrame, max_districts=None) -> list[dict]:
+    """Locate each named event in our own data, with the rule used, instead of assuming it.
+    Every district that meets the rule is kept (`max_districts` caps it only if given)."""
     c = clean[clean["area_level"] == "rdhs"]
     ev = []
     # 1. 2024 leptospirosis surge: weeks where the national weekly count exceeds 1.25 x the
@@ -331,7 +372,7 @@ def define_events(clean: pd.DataFrame, weather: pd.DataFrame, max_districts: int
                 "start": _key(2024, run[0]),
                 "end": _key(2024, run[-1]),
                 "districts": list(dist.index[:max_districts]),
-                "evidence": dist.head(max_districts),
+                "evidence": dist.iloc[:max_districts],
                 "rule": "national weekly > 1.25 x max(2022, 2023) same week for >= 3 weeks; "
                 "districts with >= 1.5 x their 2022-23 mean over the window and >= 30 excess cases",
             }
@@ -349,7 +390,7 @@ def define_events(clean: pd.DataFrame, weather: pd.DataFrame, max_districts: int
             "start": _key(2026, run[0]),
             "end": _key(2026, run[-1]),
             "districts": list(dist.index[:max_districts]),
-            "evidence": dist.head(max_districts),
+            "evidence": dist.iloc[:max_districts],
             "rule": "national weekly above every same week of 2023-2025 (longest run, "
             "a single missing week bridged); districts with >= 1.5 x their 2023-25 mean "
             "and >= 100 excess cases",
@@ -389,7 +430,7 @@ def define_events(clean: pd.DataFrame, weather: pd.DataFrame, max_districts: int
             "start": _key(wy, ww),
             "end": _key(ey, ewk),
             "districts": list(t.index[:max_districts]),
-            "evidence": t.head(max_districts),
+            "evidence": t.iloc[:max_districts],
             "rule": f"exposure = the wettest week of late 2025 in our Open-Meteo data "
             f"({wy}-W{ww:02d}, "
             f"national mean {late25.max():.0f} mm, the highest week since 2021); districts whose "
@@ -411,6 +452,7 @@ def replay(sig: pd.DataFrame, events: list[dict], lead: int = 4) -> pd.DataFrame
     '<=week' and any gain involving it is left empty rather than guessed."""
     rows = []
     s = sig.assign(key=sig["epi_year"] * 100 + sig["epi_week"])
+    sets = {**{m: [m] for m in METHODS}, "tiered": ["nb_glm", "ears_c2"]}
     for ev in events:
         start_t = s.loc[s["key"] == ev["start"], "t"].min()
         end_t = s.loc[s["key"] == ev["end"], "t"].max()
@@ -420,8 +462,8 @@ def replay(sig: pd.DataFrame, events: list[dict], lead: int = 4) -> pd.DataFrame
         for a in ev["districts"]:
             r = {"event": ev["event"], "district": a}
             g = s[(s["area"] == a) & (s["disease"] == ev["disease"]) & s["t"].between(lo, end_t)]
-            for m in METHODS:
-                h = g[(g["method"] == m) & g["alert_shown"]]
+            for m in REPLAY_METHODS:
+                h = g[g["method"].isin(sets[m]) & g["alert_shown"]]
                 r[f"{m}_first"] = (int(h["t"].min() - start_t)) if len(h) else np.nan
                 r[f"{m}_censored"] = bool(len(h)) and int(h["t"].min()) == int(lo)
                 r[f"{m}_week"] = (
@@ -433,7 +475,14 @@ def replay(sig: pd.DataFrame, events: list[dict], lead: int = 4) -> pd.DataFrame
                     if len(h)
                     else "none"
                 )
-            for m in METHODS[1:]:
+            nb_t = set(g.loc[(g["method"] == "nb_glm") & g["alert_shown"], "t"])
+            first = r["tiered_first"]
+            r["tiered_tier"] = (
+                ""
+                if pd.isna(first)
+                else ("alert" if int(first + start_t) in nb_t else "early_warning")
+            )
+            for m in REPLAY_METHODS[1:]:
                 censored = r["status_quo_censored"] or r[f"{m}_censored"]
                 r[f"{m}_gain"] = np.nan if censored else r["status_quo_first"] - r[f"{m}_first"]
             rows.append(r)

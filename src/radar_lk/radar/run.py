@@ -7,8 +7,13 @@ data/clean/radar_track_record.parquet, data/cache/radar_nb_fits.pkl (NB fits, re
 backtest), DuckDB views refreshed.
 
 Gating: an alert in a week flagged `completeness_low` (C** below the RDHS's own past 10th
-percentile) is kept but `suppressed`, with the reason. A `revised` week keeps its alert and
-carries the marker.
+percentile) is kept but `suppressed` (held back): it is shown greyed out, never hidden, with the
+shared `held_back` label (radar.labels). A `revised` week keeps its alert and carries the marker.
+
+Tiers (series-week, same value on every method's row): `tier` = 'alert' when NB-GLM alerts,
+'early_warning' when EARS C2 alerts and NB-GLM does not (only if config
+radar_display.tiers_adopted, decided by the backtest), else ''. `held_back` = a tier signal in a
+completeness_low week. `tier_label` is the dashboard/brief wording.
 """
 
 from __future__ import annotations
@@ -21,6 +26,7 @@ import numpy as np
 import pandas as pd
 
 from radar_lk import CLEAN_DIR, DATA_DIR, load_config, store
+from radar_lk.radar import labels as lb
 from radar_lk.radar.methods import all_methods, nb_fits, nb_predict
 from radar_lk.radar.series import load_panel
 
@@ -140,15 +146,57 @@ def burden_percentiles(panel: pd.DataFrame, min_past: int = 26) -> pd.DataFrame:
     return pd.concat(out, ignore_index=True)
 
 
-def burden_label(s: pd.DataFrame) -> pd.Series:
-    """Dashboard wording that separates 'unusual' from 'high but expected'."""
+def _held_back_text(s: pd.DataFrame, template: str) -> pd.Series:
+    return s["completeness_pct"].map(lambda v: lb.held_back(v, template))
+
+
+def burden_label(s: pd.DataFrame, labels: dict | None = None) -> pd.Series:
+    """Per-method dashboard wording that separates 'unusual' from 'high but expected'; a held-back
+    alert gets the held-back label with that week's completeness."""
+    labels = labels or lb.labels()
     lab = np.where(
         s["alert_shown"],
-        "unusual for this district and season",
-        np.where(s["burden_pctl"] >= 90, "high burden, within expected range", ""),
+        labels["alert"],
+        np.where(s["burden_pctl"] >= 90, labels["high_burden"], ""),
     )
-    lab = np.where(s["suppressed"], "possible rise, held back: low reporting completeness", lab)
+    lab = np.where(s["suppressed"], _held_back_text(s, labels["held_back"]), lab)
     return pd.Series(lab, index=s.index)
+
+
+def add_tiers(s: pd.DataFrame, adopted: bool, labels: dict | None = None) -> pd.DataFrame:
+    """Series-week tier from the raw NB-GLM and EARS C2 alerts (see module docstring)."""
+    labels = labels or lb.labels()
+    key = ["area", "disease", "t"]
+    w = (
+        s[s["method"].isin(["nb_glm", "ears_c2"])]
+        .pivot_table(index=key, columns="method", values="alert", aggfunc="any")
+        .reindex(columns=["nb_glm", "ears_c2"])
+        .fillna(False)
+        .astype(bool)
+    )
+    tier = np.where(w["nb_glm"], "alert", np.where(w["ears_c2"] & adopted, "early_warning", ""))
+    w = pd.DataFrame({"tier": tier}, index=w.index).reset_index()
+    s = s.drop(columns=["tier"], errors="ignore").merge(w, on=key, how="left")
+    s["tier"] = s["tier"].fillna("")
+    low = s["completeness_low"].fillna(False).astype(bool)
+    s["held_back"] = (s["tier"] != "") & low
+    lab = np.select(
+        [
+            s["held_back"],
+            s["tier"] == "alert",
+            s["tier"] == "early_warning",
+            s["burden_pctl"] >= 90,
+        ],
+        [
+            _held_back_text(s, labels["held_back"]),
+            labels["alert"],
+            labels["early_warning"],
+            labels["high_burden"],
+        ],
+        "",
+    )
+    s["tier_label"] = lab
+    return s
 
 
 def alert_rate(s: pd.DataFrame, method: str = "nb_glm") -> float:
@@ -216,7 +264,9 @@ def run(workers: int = 4, reuse_fits: bool = False) -> pd.DataFrame:
     s["quantile_used"] = q
     s = add_persistence(s)
     s = s.merge(burden_percentiles(panel), on=["area", "disease", "t"], how="left")
-    s["burden_label"] = burden_label(s)
+    labels = lb.labels()
+    s["burden_label"] = burden_label(s, labels)
+    s = add_tiers(s, lb.tiers_adopted(), labels)
     as_of = panel.dropna(subset=["week_end"])["week_end"].max()
     s["as_of"] = as_of
     s["computed_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -240,6 +290,9 @@ def run(workers: int = 4, reuse_fits: bool = False) -> pd.DataFrame:
         "sustained",
         "burden_pctl",
         "burden_label",
+        "tier",
+        "held_back",
+        "tier_label",
         "revised",
         "revision_delta",
         "completeness_pct",

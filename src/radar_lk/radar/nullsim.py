@@ -172,6 +172,16 @@ def alerts(stats_: dict, method: str, threshold: float, min_count: int) -> np.nd
     raise ValueError(method)
 
 
+def tier_alerts(stats_: dict, min_count: int) -> dict:
+    """Two-tier radar at the default thresholds: 'alert' = NB-GLM above its bound; 'early_warning'
+    = EARS C2 fires but NB-GLM does not; 'union' = either."""
+    nb = alerts(stats_, "nb_glm", DEFAULT_THRESHOLD["nb_glm"], min_count)
+    c2 = alerts(stats_, "ears_c2", DEFAULT_THRESHOLD["ears_c2"], min_count)
+    return {"tier_alert": nb, "tier_early_warning": c2 & ~nb, "tier_union": nb | c2}
+
+
+TIERS = ["tier_alert", "tier_early_warning", "tier_union"]
+
 GRIDS = {
     "nb_glm": [0.8, 0.9, 0.95, 0.975, 0.98, 0.99, 0.995, 0.998, 0.999, 0.9995, 0.9999],
     "ears_c2": [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0, 10.0, 15.0],

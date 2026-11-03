@@ -23,7 +23,8 @@ import pandas as pd
 
 from radar_lk import CLEAN_DIR, REPO_ROOT, load_config
 from radar_lk.radar import evaluation as ev
-from radar_lk.radar.nullsim import DEFAULT_THRESHOLD
+from radar_lk.radar import labels as lb
+from radar_lk.radar.nullsim import DEFAULT_THRESHOLD, TIERS
 from radar_lk.radar.run import CACHE, METHODS, radar_cfg
 from radar_lk.radar.series import load_panel
 
@@ -37,7 +38,15 @@ LABEL = {
     "ears_c2": "EARS C2",
     "ears_c3": "EARS C3",
     "nb_glm": "NB-GLM (Farrington-style)",
+    "tiered": "Two-tier (NB-GLM or EARS C2)",
 }
+TIER_LABEL = {
+    "tier_alert": "tier 'alert' (NB-GLM)",
+    "tier_early_warning": "tier 'early_warning' (EARS C2, NB-GLM silent)",
+    "tier_union": "union (either tier)",
+}
+TIER_MAX_FA = 5.0  # decision rule, fixed before looking: union null FA <= 5 / 100 ...
+TIER_MIN_GAIN = 0.0  # ... and union median replay gain vs the status quo >= 0 weeks
 COLOR = {"status_quo": "#2a78d6", "ears_c2": "#eb6834", "ears_c3": "#1baf7a", "nb_glm": "#eda100"}
 MARKER = {"status_quo": "o", "ears_c2": "s", "ears_c3": "^", "nb_glm": "D"}
 
@@ -400,10 +409,10 @@ def size_figure(sc: pd.DataFrame, path, target: float) -> None:
 
 
 def events_figure(rp: pd.DataFrame, path) -> None:
-    """First-alert week relative to the event start; three methods (status quo, EARS C3, NB-GLM)
-    to stay within the 3-series cap for point charts; the table has all four."""
+    """First-alert week relative to the event start; the status quo and the two tier components
+    (EARS C2, NB-GLM), within the 3-series cap for point charts; the table has every method."""
     plt = _plt()
-    show = ["status_quo", "ears_c3", "nb_glm"]
+    show = ["status_quo", "ears_c2", "nb_glm"]
 
     def short(e: str) -> str:
         if e.startswith("After Cyclone Ditwah"):
@@ -483,6 +492,10 @@ def main(reuse: bool = False) -> None:
     if reuse and null_p.exists() and inj_p.exists():
         print("reusing saved null simulation and injections")
         null, inj = pd.read_parquet(null_p), pd.read_parquet(inj_p)
+        if not set(TIERS) <= set(null["method"]):
+            print("saved null simulation has no tier rows; rerunning it (same seed) ...")
+            null = ev.null_false_alerts(panel, fits_all, cfg)
+            null.to_parquet(null_p, index=False)
     else:
         print("null simulation ...")
         null = ev.null_false_alerts(panel, fits_all, cfg)
@@ -497,6 +510,8 @@ def main(reuse: bool = False) -> None:
     weather = pd.read_parquet(CLEAN_DIR / "weather.parquet")
     events = ev.define_events(clean, weather)
     rp = ev.replay(sig, events)
+    te = tier_eval(null, inj, rp, mc)
+    lb.write_tiers_adopted(te["adopted"], te["why"])
     gt = ev.gating_eval(sig)
     nd = ndcu_validation(sig)
     FIG.mkdir(parents=True, exist_ok=True)
@@ -514,7 +529,137 @@ def main(reuse: bool = False) -> None:
         case_figure(sig, a, dis, y0, p, title)
         figs.append((p, a, dis))
     tr = pd.read_parquet(CLEAN_DIR / "radar_track_record.parquet")
-    write_doc(cfg, q, panel, skipped, null, inj, sw, mt, sc, events, rp, gt, nd, figs, tr, sig)
+    write_doc(cfg, q, panel, skipped, null, inj, sw, mt, sc, events, rp, gt, nd, figs, tr, sig, te)
+
+
+def replay_summary(rp: pd.DataFrame, methods) -> pd.DataFrame:
+    rows = []
+    for m in methods:
+        g = rp[f"{m}_gain"]
+        rows.append(
+            {
+                "method": LABEL[m],
+                "district-events": len(rp),
+                "method alerted": int(rp[f"{m}_first"].notna().sum()),
+                "status quo alerted": int(rp["status_quo_first"].notna().sum()),
+                "comparable (both alerted, neither censored)": int(g.notna().sum()),
+                "earlier than status quo": int((g > 0).sum()),
+                "same week": int((g == 0).sum()),
+                "later": int((g < 0).sum()),
+                "median gain (wk, both alerted)": float(g.median()) if g.notna().any() else np.nan,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def tier_eval(null: pd.DataFrame, inj: pd.DataFrame, rp: pd.DataFrame, mc: int) -> dict:
+    """Two-tier radar at the default thresholds (no re-tuning): null false alerts, sensitivity
+    (overall and by size), replay first signal, and the adopt/keep decision."""
+    tn = null[null["method"].isin(TIERS)]
+    fa = tn[tn["disease"] == "all"].set_index("method")["fa_per_100"]
+    fa_dis = tn[tn["disease"] != "all"].pivot_table(
+        index="disease", columns="method", values="fa_per_100"
+    )[TIERS]
+    dt = ev.detect_tiers(inj, mc)
+    sens = {t: 100 * dt[t].mean() for t in TIERS}
+    by_k = dt[dt["k"].between(1, 4)].groupby("k")[TIERS].mean().mul(100)
+    rs = replay_summary(rp, ["ears_c2", "nb_glm", "tiered"]).set_index("method")
+    u = rs.loc[LABEL["tiered"]]
+    fa_u, gain_u = float(fa["tier_union"]), float(u["median gain (wk, both alerted)"])
+    adopted = bool(fa_u <= TIER_MAX_FA and gain_u >= TIER_MIN_GAIN)
+    why = (
+        f"union null false alerts {fa_u:.1f}/100 (<= {TIER_MAX_FA:g}: "
+        f"{'yes' if fa_u <= TIER_MAX_FA else 'no'}); union median replay gain {gain_u:+g} wk "
+        f"(>= {TIER_MIN_GAIN:g}: {'yes' if gain_u >= TIER_MIN_GAIN else 'no'})"
+    )
+    first = dt.loc[dt["tier_union"], "first_tier"].value_counts(normalize=True).mul(100)
+    return {
+        "fa": fa,
+        "fa_dis": fa_dis,
+        "sens": sens,
+        "by_k": by_k,
+        "n_k": dt[dt["k"].between(1, 4)].groupby("k").size(),
+        "delay": float(dt["union_delay"].median()),
+        "first": first,
+        "replay": rs,
+        "adopted": adopted,
+        "why": why,
+        "fa_u": fa_u,
+        "gain_u": gain_u,
+    }
+
+
+def tier_section(te: dict, rp: pd.DataFrame) -> list[str]:
+    t = pd.DataFrame(
+        {
+            "null false alerts / 100": te["fa"].reindex(TIERS),
+            "sensitivity % (all injected)": pd.Series(te["sens"]).reindex(TIERS),
+        }
+    )
+    t.index = [TIER_LABEL[x] for x in TIERS]
+    t.index.name = "tier"
+    k = te["by_k"].copy()
+    k.columns = [TIER_LABEL[x] for x in k.columns]
+    k.index = [f"{i} x SD (n={te['n_k'][i]})" for i in k.index]
+    k.index.name = "outbreak size"
+    fd = te["fa_dis"].copy()
+    fd.columns = [TIER_LABEL[x] for x in fd.columns]
+    verdict = (
+        (
+            "**Decision: ADOPT the two tiers.** "
+            if te["adopted"]
+            else "**Decision: keep NB-GLM only (tiers not adopted).** "
+        )
+        + te["why"]
+        + "."
+    )
+    if not te["adopted"]:
+        verdict += (
+            " The early-warning tier would add more false alerts than the bar allows, or would not "
+            "bring the first signal earlier than the rule used today, so it is not worth showing."
+        )
+    else:
+        verdict += (
+            " `radar_signals.parquet` carries `tier` ('alert' / 'early_warning' / ''), `held_back` "
+            "and `tier_label`; an early warning is worded as weaker evidence than an alert."
+        )
+    tt = rp["tiered_tier"].replace("", np.nan).dropna().value_counts().to_dict()
+    return [
+        "## d2) Two-tier radar: NB-GLM alert + EARS C2 early warning",
+        "",
+        "The replay shows NB-GLM alerting late on slow build-ups while EARS C2 alerts earlier at a "
+        "low false-alert rate. Evaluated scheme, at the default thresholds (nothing re-tuned on "
+        "the replay events): **alert** = NB-GLM above its 98% bound; **early_warning** = EARS C2 "
+        "> 3 while NB-GLM is not alerting; the **union** is what a user would see. Same null "
+        "simulation (same seed) and same injected outbreaks as sections a-b. Decision rule, set "
+        f"before running: adopt if the union's null false alerts <= {TIER_MAX_FA:g} per 100 "
+        f"district-weeks AND its median replay gain vs the status-quo rule >= {TIER_MIN_GAIN:g}.",
+        "",
+        md(t, index=True),
+        "",
+        f"Median delay of the union on detected injected outbreaks: {te['delay']:.0f} weeks. "
+        "First signal on detected outbreaks: "
+        + ", ".join(f"{k} {v:.0f}%" for k, v in te["first"].items())
+        + ".",
+        "",
+        "Sensitivity % by outbreak size (default thresholds, not matched):",
+        "",
+        md(k, index=True),
+        "",
+        "Null false alerts per 100 district-weeks, by disease:",
+        "",
+        md(fd, index=True),
+        "",
+        "Event replay, first signal vs the status-quo rule (union = first week either tier "
+        "fired; gating as in section d):",
+        "",
+        md(te["replay"], index=True),
+        "",
+        f"Tier of the union's first signal in the replay: {tt}.",
+        "",
+        verdict,
+        "",
+    ]
 
 
 def _pct_table(sw, inj, null, sig, mc):
@@ -559,8 +704,9 @@ def _floor_note(sw: pd.DataFrame) -> str:
     )
 
 
-def write_doc(cfg, q, panel, skipped, null, inj, sw, mt, sc, events, rp, gt, nd, figs, tr, sig):
+def write_doc(cfg, q, panel, skipped, null, inj, sw, mt, sc, events, rp, gt, nd, figs, tr, sig, te):
     mc = cfg["min_count"]
+    labels = lb.labels()
     n_series = panel.groupby(["area", "disease"]).ngroups
     last = panel.dropna(subset=["source_issue"]).sort_values("t").iloc[-1]
     lag = load_config().get("publication_lag_weeks")
@@ -631,7 +777,8 @@ def write_doc(cfg, q, panel, skipped, null, inj, sw, mt, sc, events, rp, gt, nd,
         f"down-weighted; alert if y > the {100 * q:g}th-percentile NB bound |",
         "",
         f"Every method also needs observed >= {mc}. An alert in a week with `completeness_low` is "
-        "suppressed (shown with the reason); a `revised` week keeps its alert with the marker.",
+        "held back: shown greyed out with the reason, never hidden, and not counted in 'shown' "
+        "rates or the replay; a `revised` week keeps its alert with the marker.",
         "",
         "## a) False-alert rate (outbreak-free simulation) and the default-threshold headline",
         "",
@@ -734,8 +881,8 @@ def write_doc(cfg, q, panel, skipped, null, inj, sw, mt, sc, events, rp, gt, nd,
     L += [
         "## d) Known-event replay",
         "",
-        "Each event is located **in our data** with an explicit rule (below), not assumed. For "
-        "every "
+        "Each event is located **in our data** with an explicit rule (below), not assumed, and "
+        "**every district that meets the rule is included** (no top-N cut). For every "
         "affected district: the first week each method alerted, from 4 weeks before the event "
         "start "
         "(from the rain week itself for Ditwah) to its end; `gain` = status-quo first week minus "
@@ -753,13 +900,18 @@ def write_doc(cfg, q, panel, skipped, null, inj, sw, mt, sc, events, rp, gt, nd,
             md(evd.round(2), index=True, fmt="{:.2f}"),
             "",
         ]
+    rm = ev.REPLAY_METHODS
     cols = (
-        ["event", "district"] + [f"{m}_week" for m in METHODS] + [f"{m}_gain" for m in METHODS[1:]]
+        ["event", "district"]
+        + [f"{m}_week" for m in rm]
+        + ["tiered_tier"]
+        + [f"{m}_gain" for m in rm[1:]]
     )
     show = rp[cols].rename(
         columns={
-            **{f"{m}_week": f"{LABEL[m]} first" for m in METHODS},
-            **{f"{m}_gain": f"{LABEL[m]} gain (wk)" for m in METHODS[1:]},
+            **{f"{m}_week": f"{LABEL[m]} first" for m in rm},
+            "tiered_tier": "two-tier first signal",
+            **{f"{m}_gain": f"{LABEL[m]} gain (wk)" for m in rm[1:]},
         }
     )
     L += [
@@ -775,23 +927,8 @@ def write_doc(cfg, q, panel, skipped, null, inj, sw, mt, sc, events, rp, gt, nd,
         "![event replay](figures/radar_event_replay.png)",
         "",
     ]
-    summ = []
-    for m in METHODS[1:]:
-        g = rp[f"{m}_gain"]
-        summ.append(
-            {
-                "method": LABEL[m],
-                "district-events": len(rp),
-                "method alerted": int(rp[f"{m}_first"].notna().sum()),
-                "status quo alerted": int(rp["status_quo_first"].notna().sum()),
-                "comparable (both alerted, neither censored)": int(g.notna().sum()),
-                "earlier than status quo": int((g > 0).sum()),
-                "same week": int((g == 0).sum()),
-                "later": int((g < 0).sum()),
-                "median gain (wk, both alerted)": float(g.median()) if g.notna().any() else np.nan,
-            }
-        )
-    L += [md(pd.DataFrame(summ)), ""]
+    L += [md(replay_summary(rp, ev.REPLAY_METHODS[1:])), ""]
+    L += tier_section(te, rp)
     L += [
         "## e) Does completeness gating remove artefacts?",
         "",
@@ -829,11 +966,11 @@ def write_doc(cfg, q, panel, skipped, null, inj, sw, mt, sc, events, rp, gt, nd,
         (
             "**Verdict: the proposal's target (gating removes alerts that prove to be artefacts) "
             "is not "
-            "met.** Gating holds back alerts that persist as often as the others. The dashboard "
-            "therefore "
-            "shows them as 'possible rise, held back: low reporting completeness' with the "
-            "reason, rather "
-            "than hiding them, and gating is not counted as a precision gain."
+            "met.** Gating holds back alerts that persist as often as the others. Held-back "
+            'alerts are therefore **shown, greyed out, never hidden**, labelled: "'
+            + labels["held_back"].replace("{completeness_pct:.0f}", "X")
+            + "\" (X = that week's C**; wording in config `radar_display.labels`, shared by the "
+            "dashboard and the brief). Gating is not counted as a precision gain."
             if persists
             else "**Verdict: suppressed alerts persist less often than kept ones, so gating "
             "removes alerts that behave more like artefacts, as the proposal intended.**"
@@ -874,9 +1011,9 @@ def write_doc(cfg, q, panel, skipped, null, inj, sw, mt, sc, events, rp, gt, nd,
     mm = miss.merge(obs[["area", "epi_week", "burden_label"]], on=["area", "epi_week"], how="left")
     L += [
         f"Of the {len(miss)} district-weeks with >= 3 MOH areas flagged but no radar alert, "
-        f"{100 * (mm['burden_label'] == 'high burden, within expected range').mean():.0f}% are "
+        f"{100 * (mm['burden_label'] == labels['high_burden']).mean():.0f}% are "
         f"labelled "
-        "'high burden, within expected range' on the dashboard (count in the district's own top "
+        f"'{labels['high_burden']}' on the dashboard (count in the district's own top "
         "10% "
         "but within the expected range for the season). That is how the two signals are reconciled "
         "for the user.",
@@ -916,8 +1053,9 @@ def write_doc(cfg, q, panel, skipped, null, inj, sw, mt, sc, events, rp, gt, nd,
         "`data/clean/radar_signals.parquet` carries, per series-week and method: `weeks_persisted` "
         "(consecutive weeks up to and including this one above the bound; past weeks only), "
         "`sustained` (>= 2), `burden_pctl` (percentile of the count among the district's own past "
-        "counts) and `burden_label` ('unusual for this district and season', 'high burden, within "
-        "expected range', or held back for low completeness). `radar_track_record.parquet` has the "
+        f"counts) and `burden_label` ('{labels['alert']}', '{labels['high_burden']}', or the "
+        "held-back label for low completeness), plus the series-week `tier`, `held_back` and "
+        "`tier_label` (section d2). `radar_track_record.parquet` has the "
         "per-series alert counts and the share followed by a second high week.",
         "",
         f"NB-GLM: {len(nb)} shown alerts; {100 * nb['sustained'].mean():.0f}% sustained (>= 2 "

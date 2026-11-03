@@ -42,6 +42,12 @@ Delivered as a Streamlit dashboard + a one-page weekly brief per RDHS.
      Regional Epidemiologist saw in real time); the radar uses those, never back-filled values.
 - **Completeness is relative.** C** is undefined in the WER, so never apply an absolute threshold:
   `completeness_low` = below that RDHS's own 10th percentile of past C** (expanding, past only).
+- **Held-back alerts are shown, greyed out, never hidden.** An alert in a `completeness_low` week is
+  held back, not dropped. Its label is "Possible rise, held back: reporting completeness low (X%).
+  Late reports usually add cases, so the true rise may be larger." (X = that week's C**). The text
+  lives in `config/sources.yaml` `radar_display.labels` (read via `radar_lk.radar.labels`), so
+  the dashboard and the brief share it; never hard-code it. The backtest found that held-back
+  alerts persist as often as kept ones, so hiding them would lose real rises.
   T* is display-only (it steps from ~40% to ~93% at 2023-W52).
 - **Every displayed number carries its source file and as-of date.**
 - **No LLM reads PDFs or produces numbers.** An LLM may only phrase the brief from computed values;

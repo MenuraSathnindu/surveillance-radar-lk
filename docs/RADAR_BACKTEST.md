@@ -1,6 +1,6 @@
 # Radar backtest
 
-Generated 2026-11-02 by `python -m radar_lk.radar.run` then `python -m radar_lk.radar.backtest`. Primary data: Epidemiology Unit, Ministry of Health, Sri Lanka (WER Table 1); external validation: National Dengue Control Unit (NDCU) Weekly Dengue Update; rainfall: Open-Meteo (CC BY 4.0). Evaluated against the proposal's section 9 (evaluation contract).
+Generated 2026-11-03 by `python -m radar_lk.radar.run` then `python -m radar_lk.radar.backtest`. Primary data: Epidemiology Unit, Ministry of Health, Sri Lanka (WER Table 1); external validation: National Dengue Control Unit (NDCU) Weekly Dengue Update; rainfall: Open-Meteo (CC BY 4.0). Evaluated against the proposal's section 9 (evaluation contract).
 
 ## Highlighted finding: the source tables themselves are sometimes scrambled
 
@@ -21,7 +21,7 @@ Generated 2026-11-02 by `python -m radar_lk.radar.run` then `python -m radar_lk.
 | EARS C3 | sum over t, t-1, t-2 of max(0, C2 - 1) > 2 |
 | NB-GLM | log mu = intercept + trend + Fourier (K=2), refitted every 4 weeks on past weeks, Anscombe residual > 2.58 down-weighted; alert if y > the 98th-percentile NB bound |
 
-Every method also needs observed >= 3. An alert in a week with `completeness_low` is suppressed (shown with the reason); a `revised` week keeps its alert with the marker.
+Every method also needs observed >= 3. An alert in a week with `completeness_low` is held back: shown greyed out with the reason, never hidden, and not counted in 'shown' rates or the replay; a `revised` week keeps its alert with the marker.
 
 ## a) False-alert rate (outbreak-free simulation) and the default-threshold headline
 
@@ -142,7 +142,7 @@ Per disease, alerts per 100 district-weeks at the default thresholds: real data,
 
 ## d) Known-event replay
 
-Each event is located **in our data** with an explicit rule (below), not assumed. For every affected district: the first week each method alerted, from 4 weeks before the event start (from the rain week itself for Ditwah) to its end; `gain` = status-quo first week minus the method's first week (positive = earlier than the status-quo rule).
+Each event is located **in our data** with an explicit rule (below), not assumed, and **every district that meets the rule is included** (no top-N cut). For every affected district: the first week each method alerted, from 4 weeks before the event start (from the rain week itself for Ditwah) to its end; `gain` = status-quo first week minus the method's first week (positive = earlier than the status-quo rule).
 
 ### Leptospirosis 2024, W01-W11
 
@@ -158,6 +158,17 @@ Rule: national weekly > 1.25 x max(2022, 2023) same week for >= 3 weeks; distric
 | Puttalam | 122 | 7.00 | 17.43 | 115.00 |
 | Gampaha | 148 | 37.50 | 3.95 | 110.50 |
 | Galle | 223 | 115.00 | 1.94 | 108.00 |
+| Badulla | 165 | 66.00 | 2.50 | 99.00 |
+| Anuradhapura | 151 | 67.00 | 2.25 | 84.00 |
+| Kalutara | 155 | 77.00 | 2.01 | 78.00 |
+| Ampara | 90 | 14.50 | 6.21 | 75.50 |
+| Trincomalee | 80 | 10.50 | 7.62 | 69.50 |
+| Polonnaruwa | 103 | 35.50 | 2.90 | 67.50 |
+| Colombo | 84 | 28.50 | 2.95 | 55.50 |
+| Nuwara Eliya | 65 | 17.00 | 3.82 | 48.00 |
+| Mullaitivu | 47 | 5.50 | 8.55 | 41.50 |
+| Vavuniya | 44 | 5.00 | 8.80 | 39.00 |
+| Kandy | 69 | 33.50 | 2.06 | 35.50 |
 
 ### Leptospirosis 2024, W36-W42
 
@@ -173,6 +184,8 @@ Rule: national weekly > 1.25 x max(2022, 2023) same week for >= 3 weeks; distric
 | Kalutara | 192 | 111.50 | 1.72 | 80.50 |
 | Matara | 113 | 38.50 | 2.94 | 74.50 |
 | Anuradhapura | 55 | 12.50 | 4.40 | 42.50 |
+| Colombo | 74 | 42.00 | 1.76 | 32.00 |
+| Hambantota | 59 | 28.00 | 2.11 | 31.00 |
 
 ### Leptospirosis 2024, W50-W52
 
@@ -188,6 +201,9 @@ Rule: national weekly > 1.25 x max(2022, 2023) same week for >= 3 weeks; distric
 | Kegalle | 81 | 38.50 | 2.10 | 42.50 |
 | Anuradhapura | 72 | 31.50 | 2.29 | 40.50 |
 | Colombo | 53 | 14.50 | 3.66 | 38.50 |
+| Matara | 54 | 20.00 | 2.70 | 34.00 |
+| Galle | 76 | 42.50 | 1.79 | 33.50 |
+| Polonnaruwa | 56 | 24.50 | 2.29 | 31.50 |
 
 ### Dengue 2026, W23-W33
 
@@ -203,6 +219,17 @@ Rule: national weekly above every same week of 2023-2025 (longest run, a single 
 | Galle | 2563 | 617.00 | 4.15 | 1946.00 |
 | Ratnapura | 2225 | 841.33 | 2.64 | 1383.67 |
 | Kurunegala | 1785 | 627.33 | 2.85 | 1157.67 |
+| Hambantota | 1385 | 283.00 | 4.89 | 1102.00 |
+| Kegalle | 1520 | 573.00 | 2.65 | 947.00 |
+| Puttalam | 1155 | 231.33 | 4.99 | 923.67 |
+| Badulla | 1062 | 223.67 | 4.75 | 838.33 |
+| Anuradhapura | 673 | 159.00 | 4.23 | 514.00 |
+| Monaragala | 649 | 188.00 | 3.45 | 461.00 |
+| Nuwara Eliya | 540 | 102.67 | 5.26 | 437.33 |
+| Polonnaruwa | 461 | 110.00 | 4.19 | 351.00 |
+| Ampara | 358 | 52.67 | 6.80 | 305.33 |
+| Kalmunai | 392 | 129.00 | 3.04 | 263.00 |
+| Matale | 539 | 290.33 | 1.86 | 248.67 |
 
 ### After Cyclone Ditwah (rain week 2025-W48): leptospirosis
 
@@ -223,56 +250,135 @@ Rule: exposure = the wettest week of late 2025 in our Open-Meteo data (2025-W48,
 
 `<=` marks a first alert in the very first week searched: the method may already have been alerting before (e.g. the early-2024 leptospirosis surge continues one that began in late 2023), so that first week is censored and its gain is left empty.
 
-| event | district | Status quo (2x last year) first | EARS C2 first | EARS C3 first | NB-GLM (Farrington-style) first | EARS C2 gain (wk) | EARS C3 gain (wk) | NB-GLM (Farrington-style) gain (wk) |
-|---|---|---|---|---|---|---|---|---|
-| Leptospirosis 2024, W01-W11 | Monaragala | <=2023-W49 | <=2023-W49 | <=2023-W49 | none |  |  |  |
-| Leptospirosis 2024, W01-W11 | Ratnapura | <=2023-W49 | 2023-W50 | <=2023-W49 | none |  |  |  |
-| Leptospirosis 2024, W01-W11 | Hambantota | 2024-W01 | 2023-W50 | <=2023-W49 | 2024-W01 | +3 |  | +0 |
-| Leptospirosis 2024, W01-W11 | Kurunegala | 2023-W50 | <=2023-W49 | <=2023-W49 | 2024-W06 |  |  | -8 |
-| Leptospirosis 2024, W01-W11 | Kegalle | <=2023-W49 | none | none | 2024-W03 |  |  |  |
-| Leptospirosis 2024, W01-W11 | Puttalam | <=2023-W49 | none | none | 2024-W03 |  |  |  |
-| Leptospirosis 2024, W01-W11 | Gampaha | <=2023-W49 | none | 2024-W11 | none |  |  |  |
-| Leptospirosis 2024, W01-W11 | Galle | <=2023-W49 | <=2023-W49 | <=2023-W49 | none |  |  |  |
-| Leptospirosis 2024, W36-W42 | Ratnapura | 2024-W39 | none | none | 2024-W36 |  |  | +3 |
-| Leptospirosis 2024, W36-W42 | Galle | 2024-W39 | 2024-W36 | 2024-W36 | none | +3 | +3 |  |
-| Leptospirosis 2024, W36-W42 | Kegalle | 2024-W34 | 2024-W37 | 2024-W37 | 2024-W37 | -3 | -3 | -3 |
-| Leptospirosis 2024, W36-W42 | Gampaha | 2024-W33 | none | none | none |  |  |  |
-| Leptospirosis 2024, W36-W42 | Kurunegala | 2024-W36 | 2024-W42 | 2024-W41 | none | -6 | -5 |  |
-| Leptospirosis 2024, W36-W42 | Kalutara | 2024-W39 | 2024-W37 | 2024-W37 | none | +2 | +2 |  |
-| Leptospirosis 2024, W36-W42 | Matara | <=2024-W32 | 2024-W37 | 2024-W37 | 2024-W37 |  |  |  |
-| Leptospirosis 2024, W36-W42 | Anuradhapura | <=2024-W32 | none | 2024-W37 | 2024-W36 |  |  |  |
-| Leptospirosis 2024, W50-W52 | Jaffna | 2024-W48 | 2024-W50 | 2024-W50 | 2024-W48 | -2 | -2 | +0 |
-| Leptospirosis 2024, W50-W52 | Kurunegala | <=2024-W46 | <=2024-W46 | <=2024-W46 | none |  |  |  |
-| Leptospirosis 2024, W50-W52 | Gampaha | <=2024-W46 | none | none | 2024-W50 |  |  |  |
-| Leptospirosis 2024, W50-W52 | Ratnapura | <=2024-W46 | none | none | none |  |  |  |
-| Leptospirosis 2024, W50-W52 | Kalutara | <=2024-W46 | none | 2024-W49 | 2024-W49 |  |  |  |
-| Leptospirosis 2024, W50-W52 | Kegalle | <=2024-W46 | none | none | none |  |  |  |
-| Leptospirosis 2024, W50-W52 | Anuradhapura | 2024-W47 | 2024-W51 | 2024-W51 | none | -4 | -4 |  |
-| Leptospirosis 2024, W50-W52 | Colombo | 2024-W48 | 2024-W47 | <=2024-W46 | none | +1 |  |  |
-| Dengue 2026, W23-W33 | Gampaha | 2026-W22 | 2026-W21 | 2026-W21 | 2026-W25 | +1 | +1 | -3 |
-| Dengue 2026, W23-W33 | Colombo | 2026-W23 | 2026-W22 | 2026-W22 | 2026-W25 | +1 | +1 | -2 |
-| Dengue 2026, W23-W33 | Kalutara | 2026-W20 | 2026-W22 | 2026-W22 | 2026-W21 | -2 | -2 | -1 |
-| Dengue 2026, W23-W33 | Matara | <=2026-W19 | 2026-W21 | 2026-W21 | 2026-W21 |  |  |  |
-| Dengue 2026, W23-W33 | Kandy | 2026-W23 | <=2026-W19 | <=2026-W19 | 2026-W25 |  |  | -2 |
-| Dengue 2026, W23-W33 | Galle | <=2026-W19 | 2026-W25 | 2026-W22 | 2026-W22 |  |  |  |
-| Dengue 2026, W23-W33 | Ratnapura | 2026-W25 | <=2026-W19 | <=2026-W19 | 2026-W27 |  |  | -2 |
-| Dengue 2026, W23-W33 | Kurunegala | 2026-W23 | 2026-W23 | 2026-W22 | 2026-W25 | +0 | +1 | -2 |
-| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Matale | 2025-W50 | 2025-W51 | <=2025-W48 | 2025-W51 | -1 |  | -1 |
-| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Mannar | 2025-W50 | 2025-W50 | 2025-W50 | 2025-W50 | +0 | +0 | +0 |
-| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Kilinochchi | 2025-W50 | 2025-W49 | 2025-W49 | none | +1 | +1 |  |
-| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Nuwara Eliya | <=2025-W48 | 2025-W51 | 2025-W51 | none |  |  |  |
-| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Puttalam | 2025-W52 | 2025-W51 | 2025-W51 | none | +1 | +1 |  |
-| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Gampaha | 2026-W03 | 2025-W51 | 2025-W51 | none | +4 | +4 |  |
-| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Polonnaruwa | 2025-W51 | 2025-W49 | <=2025-W48 | none | +2 |  |  |
-| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Kandy | 2025-W51 | 2025-W49 | 2025-W49 | 2025-W51 | +2 | +2 | +0 |
+| event | district | Status quo (2x last year) first | EARS C2 first | EARS C3 first | NB-GLM (Farrington-style) first | Two-tier (NB-GLM or EARS C2) first | two-tier first signal | EARS C2 gain (wk) | EARS C3 gain (wk) | NB-GLM (Farrington-style) gain (wk) | Two-tier (NB-GLM or EARS C2) gain (wk) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Leptospirosis 2024, W01-W11 | Monaragala | <=2023-W49 | <=2023-W49 | <=2023-W49 | none | <=2023-W49 | early_warning |  |  |  |  |
+| Leptospirosis 2024, W01-W11 | Ratnapura | <=2023-W49 | 2023-W50 | <=2023-W49 | none | 2023-W50 | early_warning |  |  |  |  |
+| Leptospirosis 2024, W01-W11 | Hambantota | 2024-W01 | 2023-W50 | <=2023-W49 | 2024-W01 | 2023-W50 | early_warning | +3 |  | +0 | +3 |
+| Leptospirosis 2024, W01-W11 | Kurunegala | 2023-W50 | <=2023-W49 | <=2023-W49 | 2024-W06 | <=2023-W49 | early_warning |  |  | -8 |  |
+| Leptospirosis 2024, W01-W11 | Kegalle | <=2023-W49 | none | none | 2024-W03 | 2024-W03 | alert |  |  |  |  |
+| Leptospirosis 2024, W01-W11 | Puttalam | <=2023-W49 | none | none | 2024-W03 | 2024-W03 | alert |  |  |  |  |
+| Leptospirosis 2024, W01-W11 | Gampaha | <=2023-W49 | none | 2024-W11 | none | none |  |  |  |  |  |
+| Leptospirosis 2024, W01-W11 | Galle | <=2023-W49 | <=2023-W49 | <=2023-W49 | none | <=2023-W49 | early_warning |  |  |  |  |
+| Leptospirosis 2024, W01-W11 | Badulla | <=2023-W49 | 2023-W50 | 2023-W50 | <=2023-W49 | <=2023-W49 | alert |  |  |  |  |
+| Leptospirosis 2024, W01-W11 | Anuradhapura | 2023-W50 | <=2023-W49 | <=2023-W49 | none | <=2023-W49 | early_warning |  |  |  |  |
+| Leptospirosis 2024, W01-W11 | Kalutara | <=2023-W49 | 2024-W09 | 2023-W50 | none | 2024-W09 | early_warning |  |  |  |  |
+| Leptospirosis 2024, W01-W11 | Ampara | 2023-W52 | <=2023-W49 | <=2023-W49 | <=2023-W49 | <=2023-W49 | alert |  |  |  |  |
+| Leptospirosis 2024, W01-W11 | Trincomalee | <=2023-W49 | <=2023-W49 | <=2023-W49 | 2024-W03 | <=2023-W49 | early_warning |  |  |  |  |
+| Leptospirosis 2024, W01-W11 | Polonnaruwa | <=2023-W49 | <=2023-W49 | <=2023-W49 | <=2023-W49 | <=2023-W49 | alert |  |  |  |  |
+| Leptospirosis 2024, W01-W11 | Colombo | 2023-W52 | none | none | none | none |  |  |  |  |  |
+| Leptospirosis 2024, W01-W11 | Nuwara Eliya | 2023-W52 | 2024-W02 | 2024-W02 | 2024-W02 | 2024-W02 | alert | -2 | -2 | -2 | -2 |
+| Leptospirosis 2024, W01-W11 | Mullaitivu | 2023-W52 | 2023-W52 | 2023-W52 | 2023-W52 | 2023-W52 | alert | +0 | +0 | +0 | +0 |
+| Leptospirosis 2024, W01-W11 | Vavuniya | <=2023-W49 | 2023-W52 | <=2023-W49 | 2023-W52 | 2023-W52 | alert |  |  |  |  |
+| Leptospirosis 2024, W01-W11 | Kandy | <=2023-W49 | none | none | none | none |  |  |  |  |  |
+| Leptospirosis 2024, W36-W42 | Ratnapura | 2024-W39 | none | none | 2024-W36 | 2024-W36 | alert |  |  | +3 | +3 |
+| Leptospirosis 2024, W36-W42 | Galle | 2024-W39 | 2024-W36 | 2024-W36 | none | 2024-W36 | early_warning | +3 | +3 |  | +3 |
+| Leptospirosis 2024, W36-W42 | Kegalle | 2024-W34 | 2024-W37 | 2024-W37 | 2024-W37 | 2024-W37 | alert | -3 | -3 | -3 | -3 |
+| Leptospirosis 2024, W36-W42 | Gampaha | 2024-W33 | none | none | none | none |  |  |  |  |  |
+| Leptospirosis 2024, W36-W42 | Kurunegala | 2024-W36 | 2024-W42 | 2024-W41 | none | 2024-W42 | early_warning | -6 | -5 |  | -6 |
+| Leptospirosis 2024, W36-W42 | Kalutara | 2024-W39 | 2024-W37 | 2024-W37 | none | 2024-W37 | early_warning | +2 | +2 |  | +2 |
+| Leptospirosis 2024, W36-W42 | Matara | <=2024-W32 | 2024-W37 | 2024-W37 | 2024-W37 | 2024-W37 | alert |  |  |  |  |
+| Leptospirosis 2024, W36-W42 | Anuradhapura | <=2024-W32 | none | 2024-W37 | 2024-W36 | 2024-W36 | alert |  |  |  |  |
+| Leptospirosis 2024, W36-W42 | Colombo | 2024-W33 | none | none | none | none |  |  |  |  |  |
+| Leptospirosis 2024, W36-W42 | Hambantota | 2024-W34 | none | none | none | none |  |  |  |  |  |
+| Leptospirosis 2024, W50-W52 | Jaffna | 2024-W48 | 2024-W50 | 2024-W50 | 2024-W48 | 2024-W48 | alert | -2 | -2 | +0 | +0 |
+| Leptospirosis 2024, W50-W52 | Kurunegala | <=2024-W46 | <=2024-W46 | <=2024-W46 | none | <=2024-W46 | early_warning |  |  |  |  |
+| Leptospirosis 2024, W50-W52 | Gampaha | <=2024-W46 | none | none | 2024-W50 | 2024-W50 | alert |  |  |  |  |
+| Leptospirosis 2024, W50-W52 | Ratnapura | <=2024-W46 | none | none | none | none |  |  |  |  |  |
+| Leptospirosis 2024, W50-W52 | Kalutara | <=2024-W46 | none | 2024-W49 | 2024-W49 | 2024-W49 | alert |  |  |  |  |
+| Leptospirosis 2024, W50-W52 | Kegalle | <=2024-W46 | none | none | none | none |  |  |  |  |  |
+| Leptospirosis 2024, W50-W52 | Anuradhapura | 2024-W47 | 2024-W51 | 2024-W51 | none | 2024-W51 | early_warning | -4 | -4 |  | -4 |
+| Leptospirosis 2024, W50-W52 | Colombo | 2024-W48 | 2024-W47 | <=2024-W46 | none | 2024-W47 | early_warning | +1 |  |  | +1 |
+| Leptospirosis 2024, W50-W52 | Matara | <=2024-W46 | 2024-W47 | 2024-W47 | 2024-W47 | 2024-W47 | alert |  |  |  |  |
+| Leptospirosis 2024, W50-W52 | Galle | <=2024-W46 | none | none | none | none |  |  |  |  |  |
+| Leptospirosis 2024, W50-W52 | Polonnaruwa | 2024-W48 | 2024-W47 | <=2024-W46 | none | 2024-W47 | early_warning | +1 |  |  | +1 |
+| Dengue 2026, W23-W33 | Gampaha | 2026-W22 | 2026-W21 | 2026-W21 | 2026-W25 | 2026-W21 | early_warning | +1 | +1 | -3 | +1 |
+| Dengue 2026, W23-W33 | Colombo | 2026-W23 | 2026-W22 | 2026-W22 | 2026-W25 | 2026-W22 | early_warning | +1 | +1 | -2 | +1 |
+| Dengue 2026, W23-W33 | Kalutara | 2026-W20 | 2026-W22 | 2026-W22 | 2026-W21 | 2026-W21 | alert | -2 | -2 | -1 | -1 |
+| Dengue 2026, W23-W33 | Matara | <=2026-W19 | 2026-W21 | 2026-W21 | 2026-W21 | 2026-W21 | alert |  |  |  |  |
+| Dengue 2026, W23-W33 | Kandy | 2026-W23 | <=2026-W19 | <=2026-W19 | 2026-W25 | <=2026-W19 | early_warning |  |  | -2 |  |
+| Dengue 2026, W23-W33 | Galle | <=2026-W19 | 2026-W25 | 2026-W22 | 2026-W22 | 2026-W22 | alert |  |  |  |  |
+| Dengue 2026, W23-W33 | Ratnapura | 2026-W25 | <=2026-W19 | <=2026-W19 | 2026-W27 | <=2026-W19 | early_warning |  |  | -2 |  |
+| Dengue 2026, W23-W33 | Kurunegala | 2026-W23 | 2026-W23 | 2026-W22 | 2026-W25 | 2026-W23 | early_warning | +0 | +1 | -2 | +0 |
+| Dengue 2026, W23-W33 | Hambantota | 2026-W20 | 2026-W23 | 2026-W23 | 2026-W23 | 2026-W23 | alert | -3 | -3 | -3 | -3 |
+| Dengue 2026, W23-W33 | Kegalle | 2026-W25 | 2026-W20 | <=2026-W19 | 2026-W25 | 2026-W20 | early_warning | +5 |  | +0 | +5 |
+| Dengue 2026, W23-W33 | Puttalam | 2026-W23 | 2026-W23 | 2026-W22 | 2026-W23 | 2026-W23 | alert | +0 | +1 | +0 | +0 |
+| Dengue 2026, W23-W33 | Badulla | 2026-W20 | 2026-W23 | 2026-W23 | 2026-W25 | 2026-W23 | early_warning | -3 | -3 | -5 | -3 |
+| Dengue 2026, W23-W33 | Anuradhapura | 2026-W23 | 2026-W25 | 2026-W25 | 2026-W27 | 2026-W25 | early_warning | -2 | -2 | -4 | -2 |
+| Dengue 2026, W23-W33 | Monaragala | <=2026-W19 | 2026-W25 | 2026-W25 | 2026-W25 | 2026-W25 | alert |  |  |  |  |
+| Dengue 2026, W23-W33 | Nuwara Eliya | 2026-W21 | 2026-W21 | 2026-W21 | 2026-W25 | 2026-W21 | early_warning | +0 | +0 | -4 | +0 |
+| Dengue 2026, W23-W33 | Polonnaruwa | 2026-W21 | 2026-W25 | 2026-W25 | 2026-W25 | 2026-W25 | alert | -4 | -4 | -4 | -4 |
+| Dengue 2026, W23-W33 | Ampara | <=2026-W19 | 2026-W25 | 2026-W23 | 2026-W25 | 2026-W25 | alert |  |  |  |  |
+| Dengue 2026, W23-W33 | Kalmunai | <=2026-W19 | 2026-W27 | 2026-W27 | <=2026-W19 | <=2026-W19 | alert |  |  |  |  |
+| Dengue 2026, W23-W33 | Matale | 2026-W25 | 2026-W25 | 2026-W25 | 2026-W27 | 2026-W25 | early_warning | +0 | +0 | -2 | +0 |
+| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Matale | 2025-W50 | 2025-W51 | <=2025-W48 | 2025-W51 | 2025-W51 | alert | -1 |  | -1 | -1 |
+| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Mannar | 2025-W50 | 2025-W50 | 2025-W50 | 2025-W50 | 2025-W50 | alert | +0 | +0 | +0 | +0 |
+| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Kilinochchi | 2025-W50 | 2025-W49 | 2025-W49 | none | 2025-W49 | early_warning | +1 | +1 |  | +1 |
+| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Nuwara Eliya | <=2025-W48 | 2025-W51 | 2025-W51 | none | 2025-W51 | early_warning |  |  |  |  |
+| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Puttalam | 2025-W52 | 2025-W51 | 2025-W51 | none | 2025-W51 | early_warning | +1 | +1 |  | +1 |
+| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Gampaha | 2026-W03 | 2025-W51 | 2025-W51 | none | 2025-W51 | early_warning | +4 | +4 |  | +4 |
+| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Polonnaruwa | 2025-W51 | 2025-W49 | <=2025-W48 | none | 2025-W49 | early_warning | +2 |  |  | +2 |
+| After Cyclone Ditwah (rain week 2025-W48): leptospirosis | Kandy | 2025-W51 | 2025-W49 | 2025-W49 | 2025-W51 | 2025-W49 | early_warning | +2 | +2 | +0 | +2 |
 
 ![event replay](figures/radar_event_replay.png)
 
 | method | district-events | method alerted | status quo alerted | comparable (both alerted, neither censored) | earlier than status quo | same week | later | median gain (wk, both alerted) |
 |---|---|---|---|---|---|---|---|---|
-| EARS C2 | 40 | 30 | 40 | 19 | 11 | 2 | 6 | 1.0 |
-| EARS C3 | 40 | 33 | 40 | 15 | 9 | 1 | 5 | 1.0 |
-| NB-GLM (Farrington-style) | 40 | 22 | 40 | 14 | 1 | 4 | 9 | -1.5 |
+| EARS C2 | 67 | 52 | 67 | 30 | 13 | 6 | 11 | 0.0 |
+| EARS C3 | 67 | 55 | 67 | 24 | 10 | 4 | 10 | 0.0 |
+| NB-GLM (Farrington-style) | 67 | 41 | 67 | 24 | 1 | 7 | 16 | -2.0 |
+| Two-tier (NB-GLM or EARS C2) | 67 | 58 | 67 | 31 | 14 | 7 | 10 | 0.0 |
+
+## d2) Two-tier radar: NB-GLM alert + EARS C2 early warning
+
+The replay shows NB-GLM alerting late on slow build-ups while EARS C2 alerts earlier at a low false-alert rate. Evaluated scheme, at the default thresholds (nothing re-tuned on the replay events): **alert** = NB-GLM above its 98% bound; **early_warning** = EARS C2 > 3 while NB-GLM is not alerting; the **union** is what a user would see. Same null simulation (same seed) and same injected outbreaks as sections a-b. Decision rule, set before running: adopt if the union's null false alerts <= 5 per 100 district-weeks AND its median replay gain vs the status-quo rule >= 0.
+
+| tier | null false alerts / 100 | sensitivity % (all injected) |
+|---|---|---|
+| tier 'alert' (NB-GLM) | 2.0 | 49.0 |
+| tier 'early_warning' (EARS C2, NB-GLM silent) | 1.8 | 17.5 |
+| union (either tier) | 3.8 | 61.0 |
+
+Median delay of the union on detected injected outbreaks: 0 weeks. First signal on detected outbreaks: alert 78%, early_warning 22%.
+
+Sensitivity % by outbreak size (default thresholds, not matched):
+
+| outbreak size | tier 'alert' (NB-GLM) | tier 'early_warning' (EARS C2, NB-GLM silent) | union (either tier) |
+|---|---|---|---|
+| 1 x SD (n=276) | 12.7 | 9.8 | 22.5 |
+| 2 x SD (n=247) | 27.5 | 12.1 | 38.9 |
+| 3 x SD (n=264) | 32.2 | 14.8 | 45.5 |
+| 4 x SD (n=255) | 45.5 | 14.9 | 55.7 |
+
+Null false alerts per 100 district-weeks, by disease:
+
+| disease | tier 'alert' (NB-GLM) | tier 'early_warning' (EARS C2, NB-GLM silent) | union (either tier) |
+|---|---|---|---|
+| chickenpox | 3.2 | 2.6 | 5.8 |
+| dengue | 3.6 | 5.7 | 9.3 |
+| dysentery | 2.2 | 1.1 | 3.3 |
+| encephalitis | 0.5 | 0.1 | 0.6 |
+| enteric_fever | 0.5 | 0.1 | 0.6 |
+| food_poisoning | 3.8 | 3.1 | 6.9 |
+| human_rabies | 0.0 | 0.0 | 0.0 |
+| leishmaniasis | 1.8 | 1.2 | 3.0 |
+| leptospirosis | 3.1 | 4.2 | 7.3 |
+| meningitis | 2.6 | 2.0 | 4.6 |
+| tuberculosis | 2.7 | 2.1 | 4.8 |
+| typhus | 1.1 | 0.6 | 1.7 |
+| viral_hepatitis | 1.0 | 0.4 | 1.4 |
+
+Event replay, first signal vs the status-quo rule (union = first week either tier fired; gating as in section d):
+
+| method | district-events | method alerted | status quo alerted | comparable (both alerted, neither censored) | earlier than status quo | same week | later | median gain (wk, both alerted) |
+|---|---|---|---|---|---|---|---|---|
+| EARS C2 | 67 | 52 | 67 | 30 | 13 | 6 | 11 | 0.0 |
+| NB-GLM (Farrington-style) | 67 | 41 | 67 | 24 | 1 | 7 | 16 | -2.0 |
+| Two-tier (NB-GLM or EARS C2) | 67 | 58 | 67 | 31 | 14 | 7 | 10 | 0.0 |
+
+Tier of the union's first signal in the replay: {'early_warning': 31, 'alert': 27}.
+
+**Decision: ADOPT the two tiers.** union null false alerts 3.8/100 (<= 5: yes); union median replay gain +0 wk (>= 0: yes). `radar_signals.parquet` carries `tier` ('alert' / 'early_warning' / ''), `held_back` and `tier_label`; an early warning is worded as weaker evidence than an alert.
 
 ## e) Does completeness gating remove artefacts?
 
@@ -296,7 +402,7 @@ Result, all methods pooled (n = 618 suppressed vs 13042 kept alerts):
 1. **The completeness flag does mark incomplete weeks.** After a suppressed alert the next week's cumulative was revised in 21% of cases vs 9% after kept alerts, and raised (late cases added) in 19% vs 6%.
 2. **But the suppressed alerts do not look like artefacts.** The next 2 weeks stayed above expected after 52% of suppressed alerts vs 48% of kept ones. Late reports add cases, so a rise seen in an incomplete week is, if anything, understated, not invented.
 
-**Verdict: the proposal's target (gating removes alerts that prove to be artefacts) is not met.** Gating holds back alerts that persist as often as the others. The dashboard therefore shows them as 'possible rise, held back: low reporting completeness' with the reason, rather than hiding them, and gating is not counted as a precision gain.
+**Verdict: the proposal's target (gating removes alerts that prove to be artefacts) is not met.** Gating holds back alerts that persist as often as the others. Held-back alerts are therefore **shown, greyed out, never hidden**, labelled: "Possible rise, held back: reporting completeness low (X%). Late reports usually add cases, so the true rise may be larger." (X = that week's C**; wording in config `radar_display.labels`, shared by the dashboard and the brief). Gating is not counted as a precision gain.
 The suppressed group is small, so these percentages are imprecise.
 
 ## f) External validation: dengue radar vs NDCU 2026 high-risk MOH lists
@@ -325,7 +431,7 @@ NB-GLM pooled correlation of the weekly 0/1 series at lag L (L < 0: radar leads)
 
 NB-GLM pooled correlation of the weekly 0/1 series at lag L (L < 0: radar leads): L=-4: 0.06, L=-3: 0.17, L=-2: 0.22, L=-1: 0.34, L=0: 0.34, L=1: 0.33, L=2: 0.30, L=3: 0.25, L=4: 0.17. Peak at L = -1.
 
-Of the 111 district-weeks with >= 3 MOH areas flagged but no radar alert, 64% are labelled 'high burden, within expected range' on the dashboard (count in the district's own top 10% but within the expected range for the season). That is how the two signals are reconciled for the user.
+Of the 111 district-weeks with >= 3 MOH areas flagged but no radar alert, 64% are labelled 'High burden, within expected range' on the dashboard (count in the district's own top 10% but within the expected range for the season). That is how the two signals are reconciled for the user.
 
 ## g) 2026 separately (the proposal promised this)
 
@@ -346,7 +452,7 @@ Of the 111 district-weeks with >= 3 MOH areas flagged but no radar alert, 64% ar
 
 ![Kandy tuberculosis](figures/radar_case3_tuberculosis_Kandy.png)
 
-`data/clean/radar_signals.parquet` carries, per series-week and method: `weeks_persisted` (consecutive weeks up to and including this one above the bound; past weeks only), `sustained` (>= 2), `burden_pctl` (percentile of the count among the district's own past counts) and `burden_label` ('unusual for this district and season', 'high burden, within expected range', or held back for low completeness). `radar_track_record.parquet` has the per-series alert counts and the share followed by a second high week.
+`data/clean/radar_signals.parquet` carries, per series-week and method: `weeks_persisted` (consecutive weeks up to and including this one above the bound; past weeks only), `sustained` (>= 2), `burden_pctl` (percentile of the count among the district's own past counts) and `burden_label` ('Unusual for this district and season', 'High burden, within expected range', or the held-back label for low completeness), plus the series-week `tier`, `held_back` and `tier_label` (section d2). `radar_track_record.parquet` has the per-series alert counts and the share followed by a second high week.
 
 NB-GLM: 1085 shown alerts; 25% sustained (>= 2 weeks); 25% followed by a second high week. Weeks persisted: {1: 809, 2: 148, 3: 67, 4: 34, 5: 11, 6: 4}.
 

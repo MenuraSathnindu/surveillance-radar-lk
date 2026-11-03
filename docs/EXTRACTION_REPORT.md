@@ -389,9 +389,7 @@ Footnote text under Table 1 in the parsed issues (digits and dates masked), most
 <!-- handcheck:start -->
 ## Hand-check (manual verification against the rendered page)
 
-Scored 2026-11-03 from `data/handcheck/v2/handcheck_verified.csv`, `data/handcheck/v3/handcheck.csv`. Cells checked: **40** of 50; correct: **40**; accuracy **100.0%** (95% Wilson interval 91.2-100.0%).
-
-10 cells not yet checked.
+Scored 2026-11-03 from `data/handcheck/v2/handcheck_verified.csv`, `data/handcheck/v3/handcheck_verified.csv`. Cells checked: **50** of 50; correct: **50**; accuracy **100.0%** (95% Wilson interval 92.9-100.0%).
 <!-- handcheck:end -->
 
 ## 11. Publication lag
